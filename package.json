@@ -1,0 +1,25 @@
+{
+  "name": "xwrap",
+  "version": "0.0.1",
+  "description": "Wrap promise-based asynchronous call trees in transactions.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive -u bdd --compilers coffee:coffee-script,litcoffee:coffee-script/register"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schematist/xwrap.git"
+  },
+  "keywords": [
+    "transaction",
+    "promise",
+    "database",
+    "schematist"
+  ],
+  "author": "Shaun Cutts",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/schematist/xwrap/issues"
+  },
+  "homepage": "https://github.com/schematist/xwrap"
+}
