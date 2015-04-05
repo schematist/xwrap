@@ -3,35 +3,33 @@ Test transactions
 
     Promise = require 'bluebird'
     _ = require 'lodash'
-    {mocha, should, sinon} = require './base'
-    Schema = require( '../src/schema' ).Schema
+    {mocha, should, sinon, logger} = require './base'
+    xwrap = require '../src/xwrap'
 
 
     describe 'transactions on stub', ->
-      schema = adapter = transaction = clients = null
+      adapter = xtransaction = clients = null
       IMPLICIT = NEW = AUTO = null
       beforeEach ->
-        schema = new Schema('stub', {})
-        schema.connect().then ->
-          {adapter, transaction} = schema
-          {IMPLICIT, NEW, AUTO} = transaction
-          clients = adapter.pool.resources
-          spyClients(clients)
+        xtransaction = xwrap({adapter: 'stub'})
+        {IMPLICIT, NEW, AUTO, adapter} = xtransaction
+        clients = adapter.pool.resources
+        spyClients(clients)
 
       afterEach ->
-        schema.disconnect()
+        xwrap.disconnect()
 
       it 'single query', ->
-        schema.transaction NEW, ()->
-          schema.adapter.query('Q1')
+        xtransaction NEW, ()->
+          xtransaction.adapter.query('Q1')
         .then ->
           commands = querySeq(clients[1].query)
           commands.should.eql ['begin', 'Q1', 'commit']
 
       it 'multiple queries', ->
-        schema.transaction NEW, ()->
+        xtransaction NEW, ()->
           Promise.map ("Q#{i}" for i in [1..5]), (q)->
-            schema.adapter.query(q)
+            xtransaction.adapter.query(q)
         .then ->
           commands = querySeq(clients[1].query)
           commands = checkCommit(commands)
@@ -40,10 +38,10 @@ Test transactions
 
       it 'nested transaction', ->
         name = null
-        schema.transaction NEW, ()->
-          schema.transaction (transaction)->
+        xtransaction NEW, ()->
+          xtransaction (transaction)->
             name = transaction.name
-            schema.adapter.query('Q1')
+            xtransaction.adapter.query('Q1')
         .then ->
           commands = querySeq(clients[1].query)
           commands = checkCommit(commands)
@@ -57,8 +55,8 @@ transactions serialized.
 
       it 'multiple transactions', ->
         Promise.map [1..5], (i)->
-          schema.transaction NEW, ()->
-            schema.adapter.query("Q#{i}")
+          xtransaction NEW, ()->
+            xtransaction.adapter.query("Q#{i}")
         .then ->
           commands0 = querySeq(clients[0].query)
           commands1 = querySeq(clients[1].query)
@@ -73,7 +71,7 @@ transactions serialized.
 Queries executed by "map" can be in any order, but "then" forces order.
 
       it 'sequential batches', ->
-        schema.transaction NEW, ()->
+        xtransaction NEW, ()->
           doQueries('P').then ->doQueries('Q')
         .then ->
           commands = querySeq(clients[1].query)
@@ -89,7 +87,7 @@ heirarchy must be preserved in the executed queries.
 Note that the extra queries can come on either side of the savepoint groups.
 
       it 'nested subtransactions', ->
-        schema.transaction NEW, ()->
+        xtransaction NEW, ()->
           Promise.join(
             doQueries('X'),
             doTransactions("XT", doTransactions))
@@ -104,7 +102,7 @@ transactions, which will themselves be overleaved accross the two clients.
       it 'multiple transactions, nested subtransactions', ->
         Promise.map [1..5], (i)->
           xprefix = "X#{i}"
-          schema.transaction NEW, {name: xprefix}, ()->
+          xtransaction NEW, xprefix, ()->
             Promise.join(
               doQueries(xprefix),
               doTransactions("#{xprefix}T", doTransactions))
@@ -120,19 +118,22 @@ transactions, which will themselves be overleaved accross the two clients.
 
       checkNestedSubtransactions = (commands, prefix)->
         looseQueries = ("#{prefix}#{i}" for i in [1..5])
+        nfound = 0
         popLoose = (q)->
           idx = looseQueries.indexOf(q)
           return false if idx == -1
           looseQueries.splice(idx, 1)
+          nfound += 1
           return true
-        for i in [1..5]
-          commands.splice(0, 1) if popLoose(commands[0])
-          commands.pop() if popLoose(commands.slice(-1)[0])
-        looseQueries.length.should.equal 0
-        relexp = new RegExp("release \"#{prefix}T\d\"$")
+        checkEnds = (sub)->
+          for i in [1..5]
+            sub.splice(0, 1) if popLoose(sub[0])
+            sub.pop() if popLoose(sub.slice(-1)[0])
+        relexp = new RegExp("release \"#{prefix}T\\d\"$")
         commands = splitArray(commands, relexp)
-        commands = _.sortBy(commands, 0)
+        commands = _.sortBy commands, (s)->s.slice(-1)[0]
         commands.forEach (sub, i)->
+          checkEnds(sub)
           sub = checkSavepoint(sub, "#{prefix}T#{i + 1}")
           srelexp = new RegExp("release \"#{prefix}T\d\d\"$")
           sub = splitArray(sub, srelexp)
@@ -141,10 +142,11 @@ transactions, which will themselves be overleaved accross the two clients.
             prefix = "#{prefix}T#{i + 1}#{j + 1}"
             ssub = checkSavepoint(ssub, prefix)
             checkQueries(ssub, prefix, 5)
+        nfound.should.equal 5
 
       it 'single query with exception', ->
-        schema.transaction NEW, ()->
-          schema.adapter.query('Q1').then ->
+        xtransaction NEW, ()->
+          xtransaction.adapter.query('Q1').then ->
             throw new Error('foo')
         .catch (foo)->
           foo.message.should.equal 'foo'
@@ -156,8 +158,8 @@ transactions, which will themselves be overleaved accross the two clients.
         clients[1].query.restore()
         stub = sinon.stub(clients[1], 'query')
         stub.onCall(0).throws(new Error('foo')) 
-        schema.transaction NEW, ()->
-          schema.adapter.query('Q1')
+        xtransaction NEW, ()->
+          xtransaction.adapter.query('Q1')
         .catch (foo)->
           foo.message.should.equal 'foo'
         .then ->
@@ -168,8 +170,8 @@ transactions, which will themselves be overleaved accross the two clients.
         clients[1].query.restore()
         stub = sinon.stub(clients[1], 'query')
         stub.onCall(2).throws(new Error('foo')) 
-        schema.transaction NEW, ()->
-          schema.adapter.query('Q1')
+        xtransaction NEW, ()->
+          xtransaction.adapter.query('Q1')
         .catch (foo)->
           foo.message.should.equal 'foo'
         .then ->
@@ -177,10 +179,10 @@ transactions, which will themselves be overleaved accross the two clients.
           commands.should.eql ['begin', 'Q1', 'commit']
 
       it 'subtransaction with exception caught', ->
-        schema.transaction NEW, {name: 'X'}, ()->
-          schema.adapter.query('X1').then ->
-            schema.transaction IMPLICIT, {name: 'sub'}, ()->
-              schema.adapter.query('Q1').then ->
+        xtransaction NEW, null, 'X', ()->
+          xtransaction.adapter.query('X1').then ->
+            xtransaction IMPLICIT, null, 'sub', ()->
+              xtransaction.adapter.query('Q1').then ->
                 err = new Error('fooInner')
                 err.signed = 'unsigned'
                 throw err
@@ -192,7 +194,7 @@ transactions, which will themselves be overleaved accross the two clients.
           .then ->
             return 'OK'
         .catch (err)->
-          console.log('Outer: error', err)
+          logger.error('Outer: error', err)
           throw err
         .then (res)->
           res.should.equal 'OK'
@@ -206,14 +208,14 @@ Execute set of queries.
 
       doQueries = (prefix = 'Q')->
         Promise.map ("#{prefix}#{i}" for i in [1..5]), (q)->
-          schema.adapter.query(q)
+          xtransaction.adapter.query(q)
 
 Execute set of transactions.
 
       doTransactions = (prefix = 'T', callback = doQueries)->
         Promise.map [1..5], (i)->
           name = "#{prefix}#{i}"
-          schema.transaction IMPLICIT, {name: name}, ()->callback(name)
+          xtransaction IMPLICIT, null, name, ()->callback(name)
 
 Spy on calls to client query.
 

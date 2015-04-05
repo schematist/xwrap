@@ -1,14 +1,14 @@
 // require coffee if possible; js otherwise
 try {
-  require('coffee-script/register');  
-  schematist = require('./src/index');
+  try { require('coffee-script/register'); } catch (e) {}  
+  xwrap = require('./src/xwrap');
 }
 catch (e) {
   if(e.message.indexOf("Cannot find module") != -1 
       && (e.message.indexOf('./src/index') != -1 
         || e.message.indexOf('coffee-script/register') != -1))
-    schematist = require('./lib/index');
+    xwrap = require('./lib/xwrap');
   else
     throw e;
 }
-module.exports = schematist;
+module.exports = xwrap;

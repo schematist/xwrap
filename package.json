@@ -21,5 +21,20 @@
   "bugs": {
     "url": "https://github.com/schematist/xwrap/issues"
   },
-  "homepage": "https://github.com/schematist/xwrap"
+  "homepage": "https://github.com/schematist/xwrap",
+  "dependencies": {
+    "async-pool": "^0.2.3",
+    "async-proxy-pool": "^0.1.2",
+    "bluebird": "^2.9.15",
+    "lodash": "^3.6.0",
+    "logger-facade-console-plugin-nodejs": "0.0.3",
+    "logger-facade-nodejs": "0.0.3"
+  },
+  "devDependencies": {
+    "chai": "^2.2.0",
+    "chai-string": "^1.1.1",
+    "mocha": "^2.2.1",
+    "sinon": "^1.14.1",
+    "sinon-chai": "^2.7.0"
+  }
 }

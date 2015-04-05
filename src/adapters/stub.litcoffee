@@ -4,24 +4,20 @@ Stub Adapter
 An adapter that stubs the adapter API for testing.
 
     Promise = require 'bluebird'
-    TransactionRequest = require '../transaction'
     AsyncPool = require 'async-pool'
+    logger = (require 'logger-facade-nodejs').getLogger('xwrap')
 
-    exports.initialize = (schema)->
-      settings = schema.settings
-      adapter = new StubAdapter(settings)
-      return schema.adapter = adapter
+    exports.initialize = (settings)->
+      return new StubAdapter(settings)
 
     class StubAdapter
 
       constructor: (settings)->
         @settings = settings
-        @transactionsEnabled = true
         @pool = new AsyncPool([new StubClient('A'), new StubClient('B')])
 
       query: (text)->
-        TransactionRequest.ask(adapter: this).then (transaction)->
-          Promise.using transaction.getClient(), (client)->
+        Promise.using @xtransaction.client(), (client)->
             client.query(text)
 
 Get a client. Use with `Promise.using` in order to ensure client is
@@ -60,7 +56,7 @@ put back properly.
         @name = name
 
       query: (text)->
-        #console.log("query client #{@name}: #{text}")
+        logger.trace("query client #{@name}: #{text}")
         new Promise (res)->
           setTimeout ->
             res()
