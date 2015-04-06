@@ -12,7 +12,7 @@ transactions are ACID. It needs much work.
     spies = {}
     db = null
     Post = null
-    describe 'transactions', ->
+    describe.skip 'transactions', ->
       adapter = xtransaction = clients = query = null
       IMPLICIT = NEW = AUTO = null
 
