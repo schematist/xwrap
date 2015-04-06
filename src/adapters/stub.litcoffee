@@ -23,7 +23,7 @@ An adapter that stubs the adapter API for testing.
 Get a client. Use with `Promise.using` in order to ensure client is
 put back properly.
 
-      getClient: ()->
+      getRawClient: ()->
         @pool.use()
 
       enableTransactions: ()->

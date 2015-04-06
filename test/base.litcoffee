@@ -15,7 +15,7 @@ may change to "warn".
 
     if Logger.plugins().length == 0
       Logger.use new (require 'logger-facade-console-plugin-nodejs') {
-        level: 'debug'
+        level: 'info'
         timeFormat: 'MM:ss.SSS'
         messageFormat: "%time: %logger: %msg"
       }

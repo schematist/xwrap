@@ -32,14 +32,14 @@ adapter should be given a unique name. The
 
     class MemoryAdapter
 
-      constructor: (@xwrap, @options, @insideOf)->
-        @name = options.name
+      constructor: (@options, @insideOf)->
+        @name = options?.name ? 'memory'
         @objects = {}
-        @nclients = options.nclients ? 2
+        @nclients = @options?.nclients ? 2
         @waiting = []
         @transactionsWaiting = {}
         @clients = AsyncPool (
-          new MemoryClient(this, i) for i in [1..nclients])
+          new MemoryClient(this, i) for i in [1..@nclients])
 
 Get the value for `key`, or `undefined` if it hasn't been set.
 
@@ -116,7 +116,7 @@ to the result of the operation, to be triggered when we commit.
 
 ## Transaction interface
 
-      getClient: ()->
+      getRawClient: ()->
         return @clients.use()
 
       openTransaction: (client, name)->
@@ -177,6 +177,6 @@ to the result of the operation, to be triggered when we commit.
 
 Build and return an adapter asynchronously.
 
-    initialize = (xwrap, options)->
-      return Promise.resolve new MemoryAdapter(xwrap, options)
-
+    initialize = (options)->
+      return Promise.resolve new MemoryAdapter(options)
+    exports.initialize = initialize
