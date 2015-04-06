@@ -2,7 +2,7 @@
 Wrap asynchronous database calls in transactions, using
 nodejs and promises.
 
-https://github.com/schematist/xwrap
+## http://schematist.github.io/xwrap/
 
 # Installation
 
