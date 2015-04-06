@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Xwrap by schematist</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Xwrap</h1>
+          <h2>Wrap promise-based asynchronous call trees in transactions.</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/schematist/xwrap/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/schematist/xwrap/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/schematist/xwrap" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <p>Wrap asynchronous database calls in transactions, using
+nodejs and promises.</p>
+
+<h1>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h1>
+
+<p>npm install xwrap</p>
+
+<h1>
+<a id="what-it-does" class="anchor" href="#what-it-does" aria-hidden="true"><span class="octicon octicon-link"></span></a>What it does</h1>
+
+<p>XWrap allows you to use promise-using database tools with transactions
+without having to pass a transaction object around.</p>
+
+<p>If you use a database tool that does not itself use transactions, but:</p>
+
+<ol>
+<li><p>depends on a database connection package that keeps a pool of clients 
+(such as <a href="https://github.com/brianc/node-postgres">node postgres</a>),</p></li>
+<li><p>Which uses promises that support the progress interface.</p></li>
+</ol>
+
+<p>xwrap will let you wrap calls that tool in transactions (and savepoints, if
+supported by the backend) without having to modify the tools.</p>
+
+<p>If the tools use xwrap themselves, any transactions they create will
+automatically be converted into savepoints if wrapped by your transactions.</p>
+
+<h1>
+<a id="quick-start" class="anchor" href="#quick-start" aria-hidden="true"><span class="octicon octicon-link"></span></a>Quick Start</h1>
+
+<pre><code>Promise = require 'bluebird'
+{XRequest, initialize} = require 'xwrap'
+xwrap = initialize(
+  'pg', { url: 'postgres://username:password@localhost/database'})
+</code></pre>
+
+<p>The promise chain in this callback will be wrapped in a transaction
+the three transactions will proceed in parallel on different
+clients, or be serialized when the pool runs out of clients.</p>
+
+<pre><code>Promise.map [1..3], -&gt;
+  xwrap -&gt;
+    foo().then (rows)-&gt;
+      Promise.map rows, (row, i)-&gt;
+        bar(row, i)
+    .then -&gt;
+      # this creates savepoint and then causes error
+      baz().catch (err)-&gt;
+        # error handled here -- savepoint rolled back,
+        # but not transaction.
+</code></pre>
+
+<p><code>foo</code> can get the appropriate client automatically. <code>foo</code> might not be  written
+by you and/or the need for the client could be deeply buried, making explicit
+passing of client undesirable.</p>
+
+<pre><code>foo = -&gt;
+  XRequest.client().then (client)-&gt;
+    client.queryAsync('select * from foo')
+  .then ({rows})-&gt;
+    return rows
+</code></pre>
+
+<p>Within a transaction, calls to <code>bar</code> are in parallel, but the client request serializes them. The calls in other transactions proceed unimpeded (modulo
+the database itself, if the transactions hold locks).</p>
+
+<pre><code>bar = -&gt;
+  XRequest.client().then (client)-&gt;
+
+baz = -&gt;
+  xwrap -&gt;
+    # this creates a savepoint; if called outside a transaction
+    # it would create a top-level transaction.
+    XRequest().client().then (client)-&gt;
+      ...
+      throw new Error('Baz!')
+</code></pre>
+
+<h1>
+<a id="motivation" class="anchor" href="#motivation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Motivation</h1>
+
+<p>Suppose you have been using a package that provides a reporting interface,
+or an ORM, etc. If these packages don't use transactions, but use promises
+which support the progress interface, you can continue using them without 
+change.</p>
+
+<h1>
+<a id="api-documentation" class="anchor" href="#api-documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a>API Documentation</h1>
+
+<p>In the following, we assume</p>
+
+<pre><code>xwrap = require 'xwrap'
+</code></pre>
+
+<h3>
+<a id="xwrapoptions---xtransaction" class="anchor" href="#xwrapoptions---xtransaction" aria-hidden="true"><span class="octicon octicon-link"></span></a>xwrap(options) -&gt; xtransaction()</h3>
+
+<p>Initializes an xwrap session, passing back function used to wrap promise-
+returning callbacks in  transactions. Xwrap supprts the following options:</p>
+
+<ul>
+<li><p><code>adapter</code>: an adapter or the identifier for an adapter, which   wraps a
+database connection. If <code>adapter</code> is an object with the <code>xwrap-adapter</code>
+attribute,  then it is accepted as an adapter. If <code>adapter</code> is a string,
+<code>xwrap</code> tries to load <code>adapter</code> package if <code>adapter</code> starts with
+a "/", or the <code>xwrap-adapter</code> package otherwise. </p></li>
+<li><p><code>settings</code>: settings to initialize the adapter with. If the adapter
+is already defined, these are ignored.</p></li>
+<li><p><code>id</code>: optional identifier for the xwrap session. If passed, 
+then requests for transactions can also pass <code>id</code> to request 
+ID on right session. This mechanism allows multiple xwrap 
+sessions (say, to multiple databases) to be active 
+simultaneously.</p></li>
+<li><p><code>wrap</code>: if <code>true</code> (default), and the adapter supports wrapping, the
+underlying database connection will be wrapped. Calls using the database in
+third-party code will retrieve proxies to clients in transactions if there is
+a wrapping transaction in the call stack above them.</p></li>
+</ul>
+
+<p>If <code>id</code> is specified, and there has already been an adapter by
+that <code>id</code> defined, the other options are ignored.</p>
+
+<p>The module initializer returns the <code>xtransaction</code> function, which provides
+an interface to transaction for that adapter.</p>
+
+<h3>
+<a id="xtransaction-type-callback--or-xtransactiontype-callback-name" class="anchor" href="#xtransaction-type-callback--or-xtransactiontype-callback-name" aria-hidden="true"><span class="octicon octicon-link"></span></a>xtransaction( [type], callback ) or xtransaction({type, callback, name})</h3>
+
+<p>The function passed back by <code>initialize</code> can be used to wrap
+the activity of a promise-returning callback in a transaction.</p>
+
+<p>Used without <code>type</code>, xwrap will create a top-level
+transaction if there are no wrapping transactions (belonging
+to the same session). Valid types are <code>xwrap.NEW</code> or <code>xwrap.SUB</code>
+for explicit new and subtransactions.</p>
+
+<p>The callback receives a <code>Transaction</code> object, which supports <code>client</code>
+and <code>takeClient</code> calls directly.</p>
+
+<p>Passing a hash allows specification of a name for the transaction,
+which can be useful for logging and debugging.</p>
+
+<p>For convenience, <code>transaction()</code> also contains the xwrap interface,
+specialized to the particular adapter. For instance, <code>transaction.client()</code>
+is the same as <code>xwrap.client(id)</code>.</p>
+
+<h3>
+<a id="xwrapclientid" class="anchor" href="#xwrapclientid" aria-hidden="true"><span class="octicon octicon-link"></span></a>xwrap.client([id])</h3>
+
+<p>Returns promise of a shared client in the current transaction, if any is open.
+If there are multiple databases open, <code>id</code> can be passed to specify which
+database to use.</p>
+
+<p>Note: a shared client is just a proxy around the client; to serialize
+queries, use <code>then()</code> to wait for results before issuing a new query. Parallel use may result in interleaved queries. For example:</p>
+
+<pre><code>Promise.map ['A', 'B'], (channel)-&gt;
+  xwrap.client().then (client)-&gt;
+    client.query("#{channel}1").then -&gt;
+      client.query("#{channel}2")
+</code></pre>
+
+<p>May result in either:</p>
+
+<pre><code>A1
+A2
+B1
+B2
+</code></pre>
+
+<p>Or </p>
+
+<pre><code>A1
+B1
+A2
+B2
+</code></pre>
+
+<p>being executed. Of course (if the database driver is implemented correctly),
+the right results should be returned to the right callbacks.</p>
+
+<p>A shared client is useful for calls to third-party</p>
+
+<h3>
+<a id="xwraptakeclientid---promise-with-client" class="anchor" href="#xwraptakeclientid---promise-with-client" aria-hidden="true"><span class="octicon octicon-link"></span></a>xwrap.takeClient([id]) -&gt; Promise with client</h3>
+
+<p>This will checkout the client any the enclosing transaction</p>
+
+<h3>
+<a id="xwrapdisconnectid---promise" class="anchor" href="#xwrapdisconnectid---promise" aria-hidden="true"><span class="octicon octicon-link"></span></a>xwrap.disconnect([id]) -&gt; Promise</h3>
+
+<p>Instruct adapter to shut down and free underlying resources. Calls
+to the xwrap interface after this completes may throw errors. What
+happens to any open transactions is adapter dependent, but most
+probably they will be rolled back.</p>
+
+<h3>
+<a id="xwrapwrapid---promise" class="anchor" href="#xwrapwrapid---promise" aria-hidden="true"><span class="octicon octicon-link"></span></a>xwrap.wrap([id]) -&gt; Promise</h3>
+
+<p>If the adapter supports wrapping, the underlying database connection
+is wrapped, so that calls to retrieve database clients in 3rd party
+code will retrieve client proxies in any wrapping transaction.</p>
+
+<h1>
+<a id="adapters" class="anchor" href="#adapters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapters</h1>
+
+<p><code>xwrap</code> depends on a thin adapter around the underlying database,
+which controls connecting to the database driver, and issuing transaction
+start and stop commands.</p>
+
+<p>All adapters must support the basic API, below. The "subtransaction"
+extension, if present, allows xwrap to create subtransactions. The "wrap"
+extension, if present, allows xwrap to inject a wrapper to allow all calls
+in connected promise chains below xwrap transactions to participate
+in transactions.</p>
+
+<h2>
+<a id="basic-interface" class="anchor" href="#basic-interface" aria-hidden="true"><span class="octicon octicon-link"></span></a>Basic interface</h2>
+
+<h3>
+<a id="initializeadaptersettings---adapter" class="anchor" href="#initializeadaptersettings---adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>initialize(adapterSettings) -&gt; adapter</h3>
+
+<p>The adapter module should include an <code>initialize</code> function,
+which creates an adapter for the given settings and passes it back
+synchronously.</p>
+
+<p>After creation, xwrap sets the <code>id</code> and <code>xtransaction</code> attributes
+of the adapter.</p>
+
+<h3>
+<a id="adapterfeatures" class="anchor" href="#adapterfeatures" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.features</h3>
+
+<p>A hash, contain the features supported by the adapter. It should have
+key "xwrap"; itself a hash containing keys:</p>
+
+<ul>
+<li>basic: true if supports basic interface</li>
+<li>subtransactions: true if supports subtransactions</li>
+<li>wrap: true if supports the wrap interface.</li>
+<li>clientMethods: list of method names of clients.</li>
+<li>clientDataAttributes: list of data attributes of clients.</li>
+</ul>
+
+<p>On initialization, if or any of the keys first three keys are absent, 
+<code>xwrap</code> will introspect the adapter and guess whether
+it supports an API, and set the key itself. <code>clientMethods</code> and
+<code>clientDataAttributes</code> are required in order to create proxies
+for clients for shared access inside of transactions.</p>
+
+<h3>
+<a id="adaptergetclient---promise-of-client" class="anchor" href="#adaptergetclient---promise-of-client" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.getClient() -&gt; Promise of client</h3>
+
+<p>Returns a <a href="https://github.com/petkaantonov/bluebird/blob/master/API.md#disposerfunction-disposer---disposer)">disposer</a> with a checked out database client
+for exclusive use of xwrap.</p>
+
+<h3>
+<a id="adapteropentransactionclient-name---promise-of-adapter" class="anchor" href="#adapteropentransactionclient-name---promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.openTransaction(client, name) -&gt; Promise of adapter</h3>
+
+<p>Issue command to open a transaction on the client. <code>xwrap</code> will pass through a name given by a client, or use a random base64 string if
+no name is given. Database adapters often don't need a name to
+open a transaction, but if used, it should be quoted appropriately.</p>
+
+<h3>
+<a id="adaptercommittransactionclient-name---promise-of-adapter" class="anchor" href="#adaptercommittransactionclient-name---promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.commitTransaction(client, name) -&gt; Promise of adapter</h3>
+
+<p>Issue command to commit transaction on the client.</p>
+
+<h3>
+<a id="adapterrollbacktransactionclient-name---promise-of-adapter" class="anchor" href="#adapterrollbacktransactionclient-name---promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.rollbackTransaction(client, name) -&gt; Promise of adapter</h3>
+
+<p>Issue command to rollback transaction on the client.</p>
+
+<h3>
+<a id="adapterdisconnect---promise" class="anchor" href="#adapterdisconnect---promise" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.disconnect() -&gt; Promise</h3>
+
+<p>Disconnect client and free underlying resources. After this
+is called, the adapter may return an error on any other call.</p>
+
+<h2>
+<a id="subtransaction-interface" class="anchor" href="#subtransaction-interface" aria-hidden="true"><span class="octicon octicon-link"></span></a>Subtransaction Interface</h2>
+
+<h3>
+<a id="adapteropensubtransactionclient-name---promise-of-adapter" class="anchor" href="#adapteropensubtransactionclient-name---promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.openSubTransaction(client, name) -&gt; Promise of adapter</h3>
+
+<p>Issue command to open subtransaction with given name on client. <code>xwrap</code> will pass through a name given by a client, or use a random base64 string if
+no name is given. The command should quote the name appropriately.</p>
+
+<h3>
+<a id="adaptercommitsubtransactionclient-name---promise-of-adapter" class="anchor" href="#adaptercommitsubtransactionclient-name---promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.commitSubTransaction(client, name) -&gt; Promise of adapter</h3>
+
+<p>Issue command to commit subtransaction with given name on client. Name
+should be quoted appropriately.</p>
+
+<h3>
+<a id="adapterrollbacksubtransactionclient-name---promise-of-adapter" class="anchor" href="#adapterrollbacksubtransactionclient-name---promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.rollbackSubTransaction(client, name) -&gt; Promise of adapter</h3>
+
+<p>Issue command to rollback subtransaction with given name on client. Name
+should be quoted appropriately.</p>
+
+<h2>
+<a id="wrap-interface" class="anchor" href="#wrap-interface" aria-hidden="true"><span class="octicon octicon-link"></span></a>Wrap interface</h2>
+
+<h3>
+<a id="adapterwrapgetclientcallback----promise-of-adapter" class="anchor" href="#adapterwrapgetclientcallback----promise-of-adapter" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapter.wrap(getClientCallback)  -&gt; Promise of adapter</h3>
+
+<p>Wraps the underlying client retrieval methods in the database driver,
+calling <code>getClientCallback</code> to get a transacction client instead. After
+wrapping, other code will be able to participate in transactions opened
+above them in the call stack without needing to interact with <code>xwrap</code>,
+<strong>as long as they (thuroughly) use transactions.</strong> </p>
+
+<p><strong>Warning:</strong> <code>xwrap</code> gets its clients from <code>adapter.getClient()</code> which
+should maintain its connection to the underlying database regardless of
+wrapping.</p>
+
+<h1>
+<a id="promises-and-progress" class="anchor" href="#promises-and-progress" aria-hidden="true"><span class="octicon octicon-link"></span></a>Promises and Progress</h1>
+
+<h2>
+<a id="oh-no-progress-might-be-going-away-learn-how-xwrap-works-and-why-progress-is-such-a-good-idea" class="anchor" href="#oh-no-progress-might-be-going-away-learn-how-xwrap-works-and-why-progress-is-such-a-good-idea" aria-hidden="true"><span class="octicon octicon-link"></span></a>OH NO! Progress might be going away! Learn how xwrap works, and why progress is such a good idea.</h2>
+
+<h1>
+<a id="testing" class="anchor" href="#testing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Testing</h1>
+
+<pre><code>npm test
+</code></pre>
+
+<p>will run mocha on the test files. <code>test-transactions-stub.litcoffee</code> tests that <code>xwrap</code> wraps
+transactions successfully. <code>test-transactions.litcoffee</code> is conceived of as a test that allows
+you to check that your adapter is correctly implemented, and your transactions are really ACID.
+It needs a lot of work to be functional, still -- in particular it needs abstract methods
+(instatiated per adapter) to test "doing something" with the database, and checking the
+database state afterwards.</p>
+
+<h1>
+<a id="source-documentation" class="anchor" href="#source-documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Source Documentation</h1>
+
+<ul>
+<li><a href="./docs/xwrap.html">xwrap</a></li>
+</ul>
+        </section>
+
+        <footer>
+          Xwrap is maintained by <a href="https://github.com/schematist">schematist</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
