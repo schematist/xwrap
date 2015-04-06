@@ -14,7 +14,7 @@ other implementers could override this.
 
 When a transaction request receives no immediate response,
 the global handler is called. By default, it passes back "null",
-but the base implementation overrides this to wait further
+but the base transaction implementation overrides this to wait further
 if there are any outstanding transactions.
 
     Promise = require 'bluebird'
@@ -109,7 +109,7 @@ will be used to match requests.
             request = request.value
           if !(request instanceof Request)
             return
-          if !id? or request.id == id
+          if !id? or !request.id? or request.id == id
              request.fulfill(transaction)
              throw {name:'StopProgressPropagation'}
 

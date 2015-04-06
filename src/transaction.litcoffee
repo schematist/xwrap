@@ -120,11 +120,11 @@ transaction before we complete.
         @state = 'prepared'
         self = this
         Transaction.processing[self.name] = self
-        return Promise.using @adapter.getClient(), (client)->
+        return Promise.using @adapter.getRawClient(), (client)->
             self.execute(client)
         ###
         return Promise.any([
-          (Promise.using adapter.getClient(), (client)->
+          (Promise.using adapter.getRawClient(), (client)->
             self.execute(client)),
           requestTransaction(self.name).then (transaction)->
             _ENCLOSING.name = tranaction.name

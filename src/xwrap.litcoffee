@@ -84,6 +84,9 @@ order of the callback.
       xtransaction.takeClient = (callerName)->
         return Request.takeClient(id, callerName)
 
+      xtransaction.getTransaction = (callerName)->
+        return Request.ask(id, callerName)
+
       xtransaction.disconnect = ()->
         adapter.disconnect()
         delete adapters[adapter.id]
@@ -125,8 +128,7 @@ Load and initialize an adapter, given name, settings and ID.
 Check adapter for interfaces, and set features if not set.
 
     BASIC_INTERFACE = [
-      'getClient', 'enableTransactions', 'disableTransactions'
-      'openTransaction', 'commitTransaction', 'rollbackTransaction' ]
+      'getRawClient', 'openTransaction', 'commitTransaction', 'rollbackTransaction' ]
     SUBTRANSACTIONS_INTERFACE = [ 
       'openSubTransaction', 'commitSubTransaction', 'rollbackSubTransaction' ]
     WRAP_INTERACE = ['wrap']      
@@ -167,6 +169,9 @@ Add xwrap interface to initializer function.
     initializer.AUTO = AUTO
     initializer.Transaction = Transaction
     initializer.Request = Request
+    initializer.BASIC_INTERFACE = BASIC_INTERFACE
+    initializer.SUBTRANSACTIONS_INTERFACE = SUBTRANSACTIONS_INTERFACE
+    initializer.WRAP_INTERACE = WRAP_INTERACE
 
     initializer.useLogger = (logger_)->
       Request.logger = Transaction.logger = logger = logger_

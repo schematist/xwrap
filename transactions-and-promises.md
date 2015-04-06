@@ -1,5 +1,9 @@
 # Transactions and Promises
 
+## In a nutshell
+
+**The promise progress interface provides a facility to use the identity of a graph of asynchronous calls triggered by a callback, much like the identity of a domain or fiber can be used. This allows resource managers (such as a transaction manager) to provide properly contextualized access to resources across nested asynchronous calls. Without "progress" this isn't possible (without active cooperation by clients).**
+
 ## Problem
 
 There are a number of different tools that can interact with

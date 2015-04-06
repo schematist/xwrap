@@ -8,6 +8,10 @@ nodejs and promises.
 
     npm install xwrap
 
+Adapters need to be installed separately, for instance:
+
+    npm install xwrap-postgres    
+
 # What it does
 
 XWrap allows you to use promise-using database tools with transactions
@@ -31,7 +35,7 @@ automatically be converted into savepoints if wrapped by your transactions.
     Promise = require 'bluebird'
     xwrap = require 'xwrap'
     xtransaction = xwrap(
-      'pg', { url: 'postgres://username:password@localhost/database'})
+      'postgres', { url: 'postgres://username:password@localhost/database'})
 
 The promise chain in this callback will be wrapped in a transaction
 the three transactions will proceed in parallel on different
@@ -236,10 +240,12 @@ it supports an API, and set the key itself. `clientMethods` and
 `clientDataAttributes` are required in order to create proxies
 for clients for shared access inside of transactions.
 
-### Adapter.getClient() -> Promise of client
+### Adapter.getRawClient() -> Promise of client
 
 Returns a [disposer][1] with a checked out database client
-for exclusive use of xwrap.
+for exclusive use of xwrap. (This is a low-level inteface -- if the
+adapter wants to provide a client with the proper transaction
+context, it should use the injected `xtransaction` object.)
 
 [1]: https://github.com/petkaantonov/bluebird/blob/master/API.md#disposerfunction-disposer---disposer)
 
