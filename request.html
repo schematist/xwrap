@@ -33,7 +33,7 @@ identical, the transaction request is fulfilled. </p>
 other implementers could override this.</p>
 <p>When a transaction request receives no immediate response,
 the global handler is called. By default, it passes back “null”,
-but the base implementation overrides this to wait further
+but the base transaction implementation overrides this to wait further
 if there are any outstanding transactions.</p>
 
             </div>
@@ -230,7 +230,7 @@ will be used to match requests. </p>
         request = request.value
       <span class="hljs-keyword">if</span> !(request <span class="hljs-keyword">instanceof</span> Request)
         <span class="hljs-keyword">return</span>
-      <span class="hljs-keyword">if</span> !id? <span class="hljs-keyword">or</span> request.id == id
+      <span class="hljs-keyword">if</span> !id? <span class="hljs-keyword">or</span> !request.id? <span class="hljs-keyword">or</span> request.id == id
          request.fulfill(transaction)
          <span class="hljs-keyword">throw</span> {<span class="hljs-attribute">name</span>:<span class="hljs-string">'StopProgressPropagation'</span>}
 

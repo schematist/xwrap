@@ -215,7 +215,7 @@ transaction before we complete.</p>
     <span class="hljs-property">@state</span> = <span class="hljs-string">'prepared'</span>
     self = <span class="hljs-keyword">this</span>
     Transaction.processing[self.name] = self
-    <span class="hljs-keyword">return</span> Promise.using <span class="hljs-property">@adapter</span>.getClient(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> Promise.using <span class="hljs-property">@adapter</span>.getRawClient(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
         self.execute(client)</pre></div></div>
             
         </li>
@@ -232,7 +232,7 @@ transaction before we complete.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> Promise.any([
-      (Promise.using adapter.getClient(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+      (Promise.using adapter.getRawClient(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
         self.execute(client)),
       requestTransaction(self.name).<span class="hljs-keyword">then</span> (transaction)-&gt;
         _ENCLOSING.name = tranaction.name

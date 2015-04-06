@@ -151,6 +151,9 @@ to the id of the adapter.</p>
   xtransaction.takeClient = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
     <span class="hljs-keyword">return</span> Request.takeClient(id, callerName)
 
+  xtransaction.getTransaction = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> Request.ask(id, callerName)
+
   xtransaction.disconnect = <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
     adapter.disconnect()
     <span class="hljs-keyword">delete</span> adapters[adapter.id]
@@ -214,8 +217,7 @@ to the id of the adapter.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>BASIC_INTERFACE = [
-  <span class="hljs-string">'getClient'</span>, <span class="hljs-string">'enableTransactions'</span>, <span class="hljs-string">'disableTransactions'</span>
-  <span class="hljs-string">'openTransaction'</span>, <span class="hljs-string">'commitTransaction'</span>, <span class="hljs-string">'rollbackTransaction'</span> ]
+  <span class="hljs-string">'getRawClient'</span>, <span class="hljs-string">'openTransaction'</span>, <span class="hljs-string">'commitTransaction'</span>, <span class="hljs-string">'rollbackTransaction'</span> ]
 SUBTRANSACTIONS_INTERFACE = [ 
   <span class="hljs-string">'openSubTransaction'</span>, <span class="hljs-string">'commitSubTransaction'</span>, <span class="hljs-string">'rollbackSubTransaction'</span> ]
 WRAP_INTERACE = [<span class="hljs-string">'wrap'</span>]      
@@ -267,6 +269,9 @@ initializer.SUB = SUB
 initializer.AUTO = AUTO
 initializer.Transaction = Transaction
 initializer.Request = Request
+initializer.BASIC_INTERFACE = BASIC_INTERFACE
+initializer.SUBTRANSACTIONS_INTERFACE = SUBTRANSACTIONS_INTERFACE
+initializer.WRAP_INTERACE = WRAP_INTERACE
 
 initializer.useLogger = <span class="hljs-function"><span class="hljs-params">(logger_)</span>-&gt;</span>
   Request.logger = Transaction.logger = logger = logger_</pre></div></div>
