@@ -12,10 +12,10 @@ without having to pass a transaction object around.
 
 If you use a database tool that does not itself use transactions, but:
 
-#. depends on a database connection package that keeps a pool of clients (such 
-  as [node postgres](https://github.com/brianc/node-postgres)), 
+1. depends on a database connection package that keeps a pool of clients 
+(such as [node postgres](https://github.com/brianc/node-postgres)),
 
-#. Which uses promises that support the progress interface.
+2. Which uses promises that support the progress interface.
 
 xwrap will let you wrap calls that tool in transactions (and savepoints, if
 supported by the backend) without having to modify the tools.
