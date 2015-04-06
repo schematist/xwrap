@@ -83,6 +83,8 @@ change.
 
 See [transactions and promises][2]
 
+[2] https://github.com/schematist/xwrap/blob/master/transactions-and-promises.md
+
 # Status
 
 Just starting!
