@@ -12,7 +12,7 @@ database driver makes this possible. For instance, [node-postgres][1] creates
 a pool of clients to the database; any other utility connecting to a
 given database with the same settings will use the same pool.
 
-[1] https://github.com/brianc/node-postgres
+[1]: https://github.com/brianc/node-postgres
 
 But what if you need to use transactions? A REST package may want
 to wrap interactions in transactions, but a reporting package many
@@ -25,7 +25,7 @@ For instance, in python, using [django][2], a view that generates
 a web page can be wrapped in a decorator which causes everything
 that the view does to be wrapped in a transaction:
 
-[2] https://www.djangoproject.com/
+[2]: https://www.djangoproject.com/
 
     from django.db import transaction
 
@@ -52,8 +52,8 @@ to use, unless it was written in advance to accept a transaction?
 Its worth noting that the problem isn't asynchronicity per se. If we are 
 using django together with [gunicorn][3] running with [gevent][4], 
 
-[3] http://docs.gunicorn.org/en/19.3/
-[4] http://www.gevent.org/
+[3]: http://docs.gunicorn.org/en/19.3/
+[4]: http://www.gevent.org/
 
 The python runtime will switch contexts while waiting for i/o in a fashion
 similiar to node, and yet it is still possible to get code that is oblivious
@@ -139,8 +139,8 @@ subtransactions).
 Problem solved! (See [the package][5] and [the source documentation][6]
 for more details.)
 
-[5] https://github.com/schematist/xwrap
-[6] http://schematist.github.io/xwrap/xwrap.html
+[5]: https://github.com/schematist/xwrap
+[6]: http://schematist.github.io/xwrap/xwrap.html
 
 ## Oh No!
 

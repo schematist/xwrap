@@ -83,7 +83,7 @@ change.
 
 See [transactions and promises][2]
 
-[2] https://github.com/schematist/xwrap/blob/master/transactions-and-promises.md
+[2]: https://github.com/schematist/xwrap/blob/master/transactions-and-promises.md
 
 # Status
 
@@ -298,7 +298,7 @@ wrapping.
 
 ## OH NO! Progress might be going away! [Learn how xwrap works, and why progress is such a good idea.][2]
 
-[2] https://github.com/schematist/xwrap/blob/master/transactions-and-promises.md
+[2]: https://github.com/schematist/xwrap/blob/master/transactions-and-promises.md
 
 # Testing
 

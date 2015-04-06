@@ -5,8 +5,8 @@ Implements transaction management using two classes: [`Transaction`][1]
 which represents transactions themselves, and [`Request`][2] which represent
 requests for transactions, and wrap requests for database clients.
 
-[1] ./transaction.html
-[2] ./request.html
+[1]: ./transaction.html
+[2]: ./request.html
 
 It exports a facade defined in this file.
 
