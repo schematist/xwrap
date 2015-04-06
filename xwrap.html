@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>XWrap Transaction Manager</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h1 id="xwrap-transaction-manager">XWrap Transaction Manager</h1>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Implements transaction management using two classes: <a href="1"><code>Transaction</code></a>
+which represents transactions themselves, and <a href="2"><code>Request</code></a> which represent
+requests for transactions, and wrap requests for database clients.</p>
+<p>[1] ./transaction.html
+[2] ./request.html</p>
+<p>It exports a facade defined in this file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Promise = <span class="hljs-built_in">require</span> <span class="hljs-string">'bluebird'</span>
+_ = <span class="hljs-built_in">require</span> <span class="hljs-string">'lodash'</span>
+{NEW, SUB, AUTO, IMPLICIT} = <span class="hljs-built_in">require</span> <span class="hljs-string">'./constants'</span>
+Transaction = <span class="hljs-built_in">require</span> <span class="hljs-string">'./transaction'</span>
+Request = <span class="hljs-built_in">require</span> <span class="hljs-string">'./request'</span>
+Logger = <span class="hljs-built_in">require</span> <span class="hljs-string">'logger-facade-nodejs'</span>
+fs = <span class="hljs-built_in">require</span> <span class="hljs-string">'fs'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>By default, we use logger named “xwrap”. Override using “setLogger”
+function.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>logger = Logger.getLogger(<span class="hljs-string">'xwrap'</span>)
+Request.logger = logger
+Transaction.logger = logger
+
+adapters = {}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>All aruments can be passed in a hash. If the first argument is not a hash,
+then, arguments are interpreted based on which argument is callable: the
+first callable argument is taken to be the callback, and some or
+all of <code>type</code>, <code>id</code> and <code>name</code> may be undefined depending on the 
+order of the callback.</p>
+<ul>
+<li><p><code>type</code>: Type of transaction requested: </p>
+<ul>
+<li><code>NEW</code> a new top-level transaction</li>
+<li><code>SUB</code> a sub-transaction</li>
+<li><code>AUTO</code> an “autocommit” (dummy) transaction, which doesn’t wrap
+sub-calls.</li>
+<li><code>IMPLICIT</code> (default) either new or sub transaction, depending on
+whether we are wrapped by another open transaction.</li>
+</ul>
+</li>
+<li><p><code>name</code>: name associated with the caller who opened the transaction.
+Specify for logging and debugging.</p>
+</li>
+<li><p><code>callback</code>: callback in which to wrap database calls in transaction.</p>
+</li>
+</ul>
+<p>—</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-built_in">module</span>.exports = initializer = <span class="hljs-function"><span class="hljs-params">({adapter, settings, id, wrap})</span>-&gt;</span>
+  adapterName = adapter
+  adapter = <span class="hljs-literal">undefined</span>
+  wrap ?= <span class="hljs-literal">true</span>
+<span class="hljs-function">  <span class="hljs-title">xtransaction</span> = <span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> arguments[<span class="hljs-number">0</span>] == <span class="hljs-string">'object'</span>
+      {type, callback, name, id} = type
+    <span class="hljs-keyword">for</span> arg, i <span class="hljs-keyword">in</span> arguments
+      <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> arg == <span class="hljs-string">'function'</span>
+        callback = arg
+        [type, id, name] = <span class="hljs-attribute">Array</span>::slice.call(arguments, <span class="hljs-number">0</span>, i)
+        <span class="hljs-keyword">break</span>
+    <span class="hljs-keyword">if</span> !callback?
+      <span class="hljs-keyword">new</span> Error(<span class="hljs-string">'callback must be specified'</span>)
+
+    newTransaction = <span class="hljs-keyword">new</span> Transaction({callback, name, adapter, id})
+    type ?= IMPLICIT
+    <span class="hljs-keyword">return</span> newTransaction.start(type)
+    <span class="hljs-keyword">return</span> newTransaction
+  adapter = resolveAdapter(adapterName, settings, id)
+  adapter.id = id
+  adapter.xtransaction = xtransaction
+  findAdapterFeatures(adapter)
+  <span class="hljs-keyword">if</span> wrap? <span class="hljs-keyword">and</span> adapter.features.xwrap.wrap
+    adapter.wrap (callerName)-&gt;
+      <span class="hljs-keyword">return</span> Request.client(id, callerName)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>add a full xwrap interface to transaction, but specialized
+to the id of the adapter.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  xtransaction.client = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> Request.client(id, callerName)
+
+  xtransaction.takeClient = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> Request.takeClient(id, callerName)
+
+  xtransaction.disconnect = <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    adapter.disconnect()
+    <span class="hljs-keyword">delete</span> adapters[adapter.id]
+
+  xtransaction.NEW = NEW
+  xtransaction.SUB = SUB
+  xtransaction.AUTO = AUTO
+  xtransaction.Transaction = Transaction
+  xtransaction.Request = Request
+  xtransaction.adapter = adapter
+  xtransaction.id = id
+  <span class="hljs-keyword">return</span> xtransaction</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Load and initialize an adapter, given name, settings and ID.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">resolveAdapter</span> = <span class="hljs-params">(name, settings, id)</span>-&gt;</span>
+  adapter = adapters[id]
+  <span class="hljs-keyword">return</span> adapter <span class="hljs-keyword">if</span> adapter?
+  <span class="hljs-keyword">try</span>
+    <span class="hljs-keyword">switch</span>
+      <span class="hljs-keyword">when</span> <span class="hljs-keyword">typeof</span> name == <span class="hljs-string">'object'</span>
+        <span class="hljs-property">@name</span> = name.name
+        <span class="hljs-keyword">return</span> name
+      <span class="hljs-keyword">when</span> name.match(<span class="hljs-regexp">/^\//</span>)
+        adapterClass = <span class="hljs-built_in">require</span>(name)
+      <span class="hljs-keyword">when</span> fs.existsSync(__dirname + <span class="hljs-string">'/adapters/'</span> + name + <span class="hljs-string">'.js'</span>) ||
+          fs.existsSync(__dirname + <span class="hljs-string">'/adapters/'</span> + name + <span class="hljs-string">'.coffee'</span>) ||
+          fs.existsSync(__dirname + <span class="hljs-string">'/adapters/'</span> + name + <span class="hljs-string">'.litcoffee'</span>)
+        adapterMod = <span class="hljs-built_in">require</span> <span class="hljs-string">'./adapters/'</span> + name
+      <span class="hljs-keyword">else</span>
+        adapterMod = <span class="hljs-built_in">require</span> <span class="hljs-string">"xwrap-<span class="hljs-subst">#{name}</span>"</span>
+    <span class="hljs-keyword">return</span> adapterMod.initialize(settings)
+  <span class="hljs-keyword">catch</span> e
+    <span class="hljs-keyword">if</span> e.message.indexOf(<span class="hljs-string">'Cannot find module'</span>) != -<span class="hljs-number">1</span>
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"XWrap adapter '<span class="hljs-subst">#{name}</span>' not found."</span>)
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">throw</span> e</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Check adapter for interfaces, and set features if not set.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>BASIC_INTERFACE = [
+  <span class="hljs-string">'getClient'</span>, <span class="hljs-string">'enableTransactions'</span>, <span class="hljs-string">'disableTransactions'</span>
+  <span class="hljs-string">'openTransaction'</span>, <span class="hljs-string">'commitTransaction'</span>, <span class="hljs-string">'rollbackTransaction'</span> ]
+SUBTRANSACTIONS_INTERFACE = [ 
+  <span class="hljs-string">'openSubTransaction'</span>, <span class="hljs-string">'commitSubTransaction'</span>, <span class="hljs-string">'rollbackSubTransaction'</span> ]
+WRAP_INTERACE = [<span class="hljs-string">'wrap'</span>]      
+<span class="hljs-function">
+<span class="hljs-title">findAdapterFeatures</span> = <span class="hljs-params">(adapter)</span>-&gt;</span>
+  features = (adapter.features ?= {})
+  xwrapFeatures = (features.xwrap ?= {})
+  xwrapFeatures.clientMethods ?= [<span class="hljs-string">'query'</span>]
+  xwrapFeatures.clientDataAttributes ?= []
+
+  <span class="hljs-keyword">for</span> api <span class="hljs-keyword">in</span> [<span class="hljs-string">'basic'</span>, <span class="hljs-string">'subtransactions'</span>, <span class="hljs-string">'wrap'</span>]
+    <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> xwrapFeatures[api]?
+    methods = <span class="hljs-keyword">switch</span> api
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'basic'</span> <span class="hljs-keyword">then</span> BASIC_INTERFACE
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'subtransactions'</span> <span class="hljs-keyword">then</span> SUBTRANSACTIONS_INTERFACE
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'wrap'</span> <span class="hljs-keyword">then</span> WRAP_INTERACE
+    missing = <span class="hljs-literal">false</span>
+    <span class="hljs-keyword">for</span> method <span class="hljs-keyword">in</span> methods
+      <span class="hljs-keyword">if</span> !adapter[method]?
+        missing = <span class="hljs-literal">true</span>
+        <span class="hljs-keyword">break</span>
+    xwrapFeatures[api] = !missing</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Add xwrap interface to initializer function.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>initializer.client = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Request.client(id, callerName)
+
+initializer.takeClient = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Request.takeClient(id, callerName)
+
+initializer.disconnect = <span class="hljs-function"><span class="hljs-params">(id)</span>-&gt;</span>
+  adapters[id]?.disconnect()
+  <span class="hljs-keyword">delete</span> adapters[id]
+
+initializer.NEW = NEW
+initializer.SUB = SUB
+initializer.AUTO = AUTO
+initializer.Transaction = Transaction
+initializer.Request = Request
+
+initializer.useLogger = <span class="hljs-function"><span class="hljs-params">(logger_)</span>-&gt;</span>
+  Request.logger = Transaction.logger = logger = logger_</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p><a href="./index.html"><strong>Home</strong></a></p>
+
+            </div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
