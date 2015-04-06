@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Memory Adapter</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h1 id="memory-adapter">Memory Adapter</h1>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>A local memory adapter for testing.</p>
+<p>The adapter stores a hash of objects and a hash of transactions. Each
+transaction is another memory adapter. When an object is used in the
+transaction, the object is locked by having its key changed to point to the
+transaction rather than the object, and the object is put in the transactions
+objects. </p>
+<p>When an object is set that is already in a transaction, the
+call blocks, and its promise is put in a queue to be released
+when that transaction continues.</p>
+<p>When the transaction commits or rolls back, the queue is released. </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Promise = <span class="hljs-built_in">require</span> <span class="hljs-string">'bluebird'</span>
+AsyncPool = <span class="hljs-built_in">require</span> <span class="hljs-string">'async-pool'</span>
+<span class="hljs-function">
+<span class="hljs-title">label</span> = -&gt;</span>
+  psbytes(<span class="hljs-number">9</span>).<span class="hljs-keyword">then</span> (bytes)-&gt;bytes.toString(<span class="hljs-string">'base64'</span>)
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Deadlock</span></span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@message</span>)</span> -&gt;</span>
+    <span class="hljs-property">@name</span> = <span class="hljs-string">"Deadlock"</span>
+    Error.captureStackTrace(<span class="hljs-keyword">this</span>, Deadlock)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Memory adapter represents both underlying key/value store, and a transaction.
+Aside from transaction public interface is just <code>get</code> and <code>set</code>. A memory
+adapter should be given a unique name. The </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MemoryAdapter</span></span>
+
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@xwrap</span>, <span class="hljs-property">@options</span>, <span class="hljs-property">@insideOf</span>)</span>-&gt;</span>
+    <span class="hljs-property">@name</span> = options.name
+    <span class="hljs-property">@objects</span> = {}
+    <span class="hljs-property">@nclients</span> = options.nclients ? <span class="hljs-number">2</span>
+    <span class="hljs-property">@waiting</span> = []
+    <span class="hljs-property">@transactionsWaiting</span> = {}
+    <span class="hljs-property">@clients</span> = AsyncPool (
+      <span class="hljs-keyword">new</span> MemoryClient(<span class="hljs-keyword">this</span>, i) <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> [<span class="hljs-number">1.</span>.nclients])</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Get the value for <code>key</code>, or <code>undefined</code> if it hasn’t been set.</p>
+<p>If it is inside the transaction already, it may have been taken by a sub-
+transaction. If so, wait for it, and return when that commits.</p>
+<p>If it is not in transaction check for it from super transaction, and return
+that value (after possibly having waited for it), including it in the
+transaction as well.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">get</span>: <span class="hljs-function"><span class="hljs-params">(key)</span>-&gt;</span>
+    current = <span class="hljs-property">@objects</span>[key]
+    current = <span class="hljs-property">@objects</span>[key]
+    <span class="hljs-keyword">if</span> current instanceOf MemoryAdapter
+      <span class="hljs-keyword">return</span> current._addWaiting {
+        <span class="hljs-attribute">op</span>: <span class="hljs-string">'set'</span>, <span class="hljs-attribute">transaction</span>: <span class="hljs-keyword">this</span>,
+        <span class="hljs-attribute">key</span>: key
+      }
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@insideOf</span>?
+      <span class="hljs-keyword">return</span> insideOf.get(key).bind(<span class="hljs-keyword">this</span>).<span class="hljs-keyword">then</span> (value)-&gt;
+        <span class="hljs-property">@objects</span>[key] = value
+        <span class="hljs-keyword">return</span> value
+    <span class="hljs-keyword">return</span> Promise.resolve().delay().<span class="hljs-keyword">then</span> -&gt; <span class="hljs-literal">undefined</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Set <code>value</code> for <code>key</code>.</p>
+<p>If we are inside another transaction, lock key in that transaction first,
+then set in this transaction, possibly after waiting for subtransaction.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">set</span>: <span class="hljs-function"><span class="hljs-params">(key, value)</span>-&gt;</span>
+    Promise.resolve().bind(<span class="hljs-keyword">this</span>).<span class="hljs-keyword">then</span> -&gt;
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@insideOf</span>?
+        <span class="hljs-property">@insideOf</span>.set(key, <span class="hljs-keyword">this</span>)
+    .<span class="hljs-keyword">then</span> -&gt;
+      current = <span class="hljs-property">@objects</span>[key]
+      <span class="hljs-keyword">if</span> current instanceOf MemoryAdapter
+        <span class="hljs-keyword">return</span> current._addWaiting {
+          <span class="hljs-attribute">op</span>: <span class="hljs-string">'set'</span>, <span class="hljs-attribute">transaction</span>: <span class="hljs-keyword">this</span>,
+          <span class="hljs-attribute">key</span>: key, <span class="hljs-attribute">value</span>: value
+        }
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-property">@objects</span>[key] = value
+        <span class="hljs-keyword">return</span> Promise.resolve().delay().<span class="hljs-keyword">then</span> -&gt;<span class="hljs-keyword">this</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Add an operation waiting for this transaction to commit. Besides putting
+on the queue, we compile the complete list of transactions waiting
+and check if we aren’t waiting on ourselves indirectly. If we are, return
+a rejected promise (deadlock). Otherwise return promise that resolves
+to the result of the operation, to be triggered when we commit.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">_addWaiting</span>: <span class="hljs-function"><span class="hljs-params">(opHash)</span>-&gt;</span>
+    transaction = opHash.transaction
+<span class="hljs-function">    <span class="hljs-title">_deadlock</span> = -&gt;</span>
+      Promise.throws <span class="hljs-keyword">new</span> Deadlock(
+        <span class="hljs-string">"<span class="hljs-subst">#{transaction.name}</span> and <span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span> wait for each other"</span>)
+    <span class="hljs-keyword">if</span> transaction.name == <span class="hljs-property">@name</span>
+      <span class="hljs-keyword">return</span> _deadlock()
+    <span class="hljs-keyword">for</span> name <span class="hljs-keyword">of</span> transaction.transactionsWaiting
+      <span class="hljs-keyword">if</span> name == <span class="hljs-property">@name</span>
+        _deadlock()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>merge as separate pass so state clean if deadlock handled</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> name <span class="hljs-keyword">of</span> transaction.transactionsWaiting
+      <span class="hljs-property">@transactionsWaiting</span>[name] = <span class="hljs-literal">true</span>
+    <span class="hljs-property">@waiting</span>.push opHash
+    <span class="hljs-keyword">return</span> Promise.resolve().delay().<span class="hljs-keyword">then</span> -&gt;<span class="hljs-keyword">this</span>
+
+  <span class="hljs-attribute">_releaseWaiting</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    Promise.resolve(opHash).bind(<span class="hljs-keyword">this</span>).map ({op, key, value, transaction})-&gt;
+      transaction[op](key, value)
+    .<span class="hljs-keyword">then</span> -&gt;
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <h2 id="transaction-interface">Transaction interface</h2>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getClient</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@clients</span>.use()
+
+  <span class="hljs-attribute">openTransaction</span>: <span class="hljs-function"><span class="hljs-params">(client, name)</span>-&gt;</span>
+    name ?= <span class="hljs-string">"<span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span>-<span class="hljs-subst">#{client.name}</span>"</span>
+    <span class="hljs-property">@transactions</span>.push = transaction = <span class="hljs-keyword">new</span> MemoryAdapter({<span class="hljs-attribute">name</span>: name})
+    client.transactions.push transaction
+    <span class="hljs-keyword">return</span> Promise.resolve(<span class="hljs-keyword">this</span>)
+
+  <span class="hljs-attribute">commitTransaction</span>: <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+    transaction = client.transactions.pop()
+    <span class="hljs-keyword">return</span> Promise.resolve(<span class="hljs-keyword">this</span>) <span class="hljs-keyword">if</span> !transaction?
+    Promise.resolve(Object.keys(transaction)).bind(<span class="hljs-keyword">this</span>).map (k)-&gt;
+      <span class="hljs-property">@set</span> k, transaction[k]
+    .<span class="hljs-keyword">then</span> -&gt;
+      transaction._releaseWaiting()
+
+  <span class="hljs-attribute">rollbackTransaction</span>: <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+    transaction = client.transactions.pop()
+    <span class="hljs-keyword">return</span> Promise.resolve(<span class="hljs-keyword">this</span>) <span class="hljs-keyword">unless</span> transaction?
+    <span class="hljs-keyword">return</span> transaction._releaseWaiting()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <h2 id="subtransaction-interface">Subtransaction interface</h2>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">openSubTransaction</span>: <span class="hljs-function"><span class="hljs-params">(client, name)</span>-&gt;</span>
+    <span class="hljs-property">@openTransaction</span>(client, name)
+
+  <span class="hljs-attribute">commitSubTransaction</span>: <span class="hljs-function"><span class="hljs-params">(client, name)</span>-&gt;</span>
+    <span class="hljs-property">@commitTransaction</span>(client, name)
+
+  <span class="hljs-attribute">rollbackSubTransaction</span>: <span class="hljs-function"><span class="hljs-params">(client, name)</span>-&gt;</span>
+    <span class="hljs-property">@commitTransaction</span>(client, name)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <h2 id="wrapping-interface">Wrapping interface</h2>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">wrap</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-property">@get</span> = <span class="hljs-function"><span class="hljs-params">(key)</span>-&gt;</span>
+      Promise.using xwrap.client(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+        client.get(key)
+
+    <span class="hljs-property">@set</span> = <span class="hljs-function"><span class="hljs-params">(key, value)</span>-&gt;</span>
+      Promise.using xwrap.client(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+        client.set(key, value)
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MemoryClient</span></span>
+
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@adapter</span>, <span class="hljs-property">@n</span>)</span>-&gt;</span>
+    <span class="hljs-property">@transactions</span> = []
+
+  <span class="hljs-attribute">get</span>: <span class="hljs-function"><span class="hljs-params">(key)</span>-&gt;</span>
+    transaction = <span class="hljs-property">@transactions</span>.slice(-<span class="hljs-number">1</span>)[<span class="hljs-number">0</span>]
+    <span class="hljs-keyword">if</span> transaction?
+      value = transaction.get(key)
+
+
+  <span class="hljs-attribute">set</span>: <span class="hljs-function"><span class="hljs-params">(key, value)</span>-&gt;</span>
+    transaction = <span class="hljs-property">@transactions</span>.slice(-<span class="hljs-number">1</span>)[<span class="hljs-number">0</span>] ? <span class="hljs-property">@adapater</span>
+    transaction.set(key, value)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Build and return an adapter asynchronously.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">initialize</span> = <span class="hljs-params">(xwrap, options)</span>-&gt;</span>
+  <span class="hljs-keyword">return</span> Promise.resolve <span class="hljs-keyword">new</span> MemoryAdapter(xwrap, options)</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

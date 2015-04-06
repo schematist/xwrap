@@ -286,3 +286,17 @@ wrapping.
 
 ## OH NO! Progress might be going away! Learn how xwrap works, and why progress is such a good idea.
 
+# Testing
+
+    npm test
+
+will run mocha on the test files. `test-transactions-stub.litcoffee` tests that `xwrap` wraps
+transactions successfully. `test-transactions.litcoffee` is conceived of as a test that allows
+you to check that your adapter is correctly implemented, and your transactions are really ACID.
+It needs a lot of work to be functional, still -- in particular it needs abstract methods
+(instatiated per adapter) to test "doing something" with the database, and checking the
+database state afterwards.
+
+# Source Documentation
+
+* [xwrap](./docs/xwrap.html)

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>XWrap Request</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h1 id="xwrap-request">XWrap Request</h1>
+<p>A <code>Request</code> transaction requensts and provides a static interface for responses.
+To make a request, call <code>Request.ask()</code>  Ask takes an optional hash;
+if you want to request a transaction on a particular database adapter, call
+<code>`Request.ask({adapter: adapter})</code>.</p>
+<p>The transaction class itself, will call fulfillTransaction,
+and pass in another hash. If objects under matching keys are
+identical, the transaction request is fulfilled. </p>
+<p>The base implementation supports the <code>adapter</code> keyword, but
+other implementers could override this.</p>
+<p>When a transaction request receives no immediate response,
+the global handler is called. By default, it passes back “null”,
+but the base implementation overrides this to wait further
+if there are any outstanding transactions.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Promise = <span class="hljs-built_in">require</span> <span class="hljs-string">'bluebird'</span>
+__requestNumber = <span class="hljs-number">0</span>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Request</span> </span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Wrapper around <code>new Request</code>, then <code>getTransaction</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@ask</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
+    (<span class="hljs-keyword">new</span> Request id, name).getTransaction()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Get a shared client in a transaction.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@client</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> Request.ask(id, name).<span class="hljs-keyword">then</span> (transaction)-&gt; 
+      transaction.client()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Checkout client from transaction.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@takeClient</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
+    <span class="hljs-keyword">return</span> Request.ask(id, name.<span class="hljs-keyword">then</span>) (transaction)-&gt;
+      transaction.takeClient()
+
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@id</span>, <span class="hljs-property">@name</span>)</span>-&gt;</span>
+    __requestNumber += <span class="hljs-number">1</span>
+    <span class="hljs-property">@name</span> = <span class="hljs-string">"?<span class="hljs-subst">#{__requestNumber}</span>"</span> <span class="hljs-keyword">if</span> !<span class="hljs-property">@name</span>?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Returns a promise with the transaction.</p>
+<p>Sends self as progress; transaction will call <code>fulfill</code> where the 
+a progress handler handles and resolves the promise with the transaction.</p>
+<p>The call to <code>fulfill</code> takes place after <code>getTransaction</code>, but is
+still synchronous. So if we delay one tick we should be assured of
+receiving transaction if it exists. Thus, if we wait one tick more
+and still haven’t got a transaction, we assume there is no wrapper.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getTransaction</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    self = <span class="hljs-keyword">this</span>
+    <span class="hljs-property">@deferred</span> = d = Promise.defer()
+    Request.logger.debug(<span class="hljs-string">"ASK <span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span>"</span>)
+    process.nextTick -&gt;
+      Request.logger.debug(<span class="hljs-string">"(ASK UP)"</span>)
+      d.progress self
+      process.nextTick -&gt;
+        Request.logger.debug(<span class="hljs-string">"(ASK UNA)"</span>)
+        <span class="hljs-keyword">if</span> d.promise.isPending()
+          Request.handleUnanswered(self)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>create error so we can capture the “getTransaction”
+stack trace in case handler causes us to reject.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    err = <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"cancelled"</span>)
+    <span class="hljs-keyword">return</span> d.promise.<span class="hljs-keyword">catch</span> (cerr)-&gt;
+      err.cancel = cerr
+      <span class="hljs-keyword">throw</span> err</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Called by the transaction progress handler to pass back
+the transaction.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">fulfill</span>: <span class="hljs-function"><span class="hljs-params">(transaction)</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@deferred</span>?.promise.isPending()
+      Request.logger.debug(
+        <span class="hljs-string">"FULFILL <span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span> by:"</span>, transaction?.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
+      <span class="hljs-property">@deferred</span>.resolve(transaction)
+      <span class="hljs-keyword">delete</span> <span class="hljs-property">@deferred</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>In case a progress handler wants to abort (e.g. deadlock stuck transaction
+timeout). Currently not used, but could be useful as the transaction
+manager might be able to detect some resource contention that the database
+might not be aware of.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">reject</span>: <span class="hljs-function"><span class="hljs-params">(reason)</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@deferred</span>?.promise.isPending()
+      <span class="hljs-property">@deferred</span>.reject(reason)
+      <span class="hljs-keyword">delete</span> <span class="hljs-property">@deferred</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Progres handler used by transaction to listen to and
+fulfill requests. <code>transaction</code> should be the current transaction.
+<code>promise</code> should be the promise we are wrapping in which
+to fulfill transaction requests. <code>id</code>, if passed,
+will be used to match requests. </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@handle</span>: <span class="hljs-function"><span class="hljs-params">(transaction, promise, id)</span>-&gt;</span>
+    Request.logger.debug(<span class="hljs-string">"HANDLE BY"</span>, transaction.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
+    <span class="hljs-keyword">if</span> !promise? <span class="hljs-keyword">or</span> !promise.progressed?
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"Cannot pass transaction: no promise; got <span class="hljs-subst">#{promise}</span>"</span>)
+
+    promise.progressed (request)-&gt;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>unwrap — annoying oddity</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">while</span> request.value?
+        request = request.value
+      <span class="hljs-keyword">if</span> !(request <span class="hljs-keyword">instanceof</span> Request)
+        <span class="hljs-keyword">return</span>
+      <span class="hljs-keyword">if</span> !id? <span class="hljs-keyword">or</span> request.id == id
+         request.fulfill(transaction)
+         <span class="hljs-keyword">throw</span> {<span class="hljs-attribute">name</span>:<span class="hljs-string">'StopProgressPropagation'</span>}
+
+      Request.logger.debug(
+        <span class="hljs-string">"REQ-<span class="hljs-subst">#{request.name}</span> doesn't match"</span>, transaction.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
+      <span class="hljs-keyword">return</span>
+    <span class="hljs-keyword">return</span> promise</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Handle unanswered by passing a null transaction. This could be a useful
+default, but currently is overridden by the transaction manager.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@handleUnanswered</span> = <span class="hljs-function"><span class="hljs-params">(request)</span>-&gt;</span>
+    <span class="hljs-keyword">debugger</span>
+    request.fulfill(<span class="hljs-literal">null</span>)
+
+<span class="hljs-built_in">module</span>.exports = Request</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

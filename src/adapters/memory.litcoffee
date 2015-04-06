@@ -107,7 +107,7 @@ to the result of the operation, to be triggered when we commit.
         return Promise.resolve().delay().then ->this
 
       _releaseWaiting: ()->
-        Promise.resolve(opHash).bind(this), ({op, key, value, transaction})->
+        Promise.resolve(opHash).bind(this).map ({op, key, value, transaction})->
           transaction[op](key, value)
         .then ->
           return this

@@ -20,6 +20,10 @@ Test base
     initializer = require('../src/xwrap')
     if !global.getXWrap?
       global.getXWrap = ->
-        return initializer({adapter:'memory', id: 'memory'})
+        return {
+          xtranaction: initializer({adapter:'memory', id: 'memory'})
+          query: (client, qstring)->
+            client.get(qstring)
+        }
 
     module.exports = {mocha, chai, should, sinon, getXWrap, logger}

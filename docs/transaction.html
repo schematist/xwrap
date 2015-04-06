@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Transaction</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h1 id="transaction">Transaction</h1>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>A transaction, which wraps database usage in transaction start and
+either commit or rollback signals.</p>
+<p>Represents a transaction, which can exist in several states:</p>
+<ul>
+<li><p>implicit: may or may not be included in another enclosing transaction.</p>
+</li>
+<li><p>prepared: is outer transaction; doesn’t have client allocated.</p>
+</li>
+<li><p>merged: inner transaction, waiting with outer to give it client</p>
+</li>
+<li><p>executing: is executing with client</p>
+</li>
+<li><p>complete: is finished execution.</p>
+</li>
+</ul>
+<p>When an implicit transaction is created, it is unknown whether its
+inside another transaction. </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Promise = <span class="hljs-built_in">require</span> <span class="hljs-string">'bluebird'</span>
+_ = <span class="hljs-built_in">require</span> <span class="hljs-string">'lodash'</span>
+Request = <span class="hljs-built_in">require</span> <span class="hljs-string">'./request'</span>
+psbytes = Promise.promisify(<span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>).pseudoRandomBytes)
+{ NEW, SUB, AUTO, IMPLICIT, 
+  GLOBAL_TIMEOUT, MAX_REQUEST_IN_TRANSACTION
+  TICKER_REPEAT
+} = <span class="hljs-built_in">require</span> <span class="hljs-string">'./constants'</span>
+AsyncProxyPool = <span class="hljs-built_in">require</span> <span class="hljs-string">'async-proxy-pool'</span>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Transaction</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>List of explicit transactions currently processing.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@processing</span> = {}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>List of implicit transactions waiting to see if enclosed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@implicit</span> = []</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>List of unanswered transaction requests waiting to see if enclosed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@unanswered</span> = []
+
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">({<span class="hljs-property">@callback</span>, name, <span class="hljs-property">@adapter</span>, <span class="hljs-property">@id</span>})</span>-&gt;</span>
+    <span class="hljs-property">@name</span> = name
+    <span class="hljs-property">@state</span> = <span class="hljs-string">'initial'</span>
+    <span class="hljs-property">@subtransactions</span> = []
+    <span class="hljs-property">@_client</span> = <span class="hljs-literal">null</span>
+    <span class="hljs-property">@isSubtransaction</span> = <span class="hljs-literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Start the transaction up — depending on the type.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">start</span>: <span class="hljs-function"><span class="hljs-params">(transactionType)</span>-&gt;</span>
+    self = <span class="hljs-keyword">this</span>
+    Promise.resolve(<span class="hljs-property">@name</span>).<span class="hljs-keyword">then</span> (name)-&gt;
+      <span class="hljs-keyword">return</span> name <span class="hljs-keyword">if</span> name
+      psbytes(<span class="hljs-number">12</span>).<span class="hljs-keyword">then</span> (buf)-&gt;buf.toString(<span class="hljs-string">'base64'</span>)
+    .<span class="hljs-keyword">then</span> (name)-&gt;
+      Transaction.logger.debug(<span class="hljs-string">"START"</span>, name.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>))
+      self.name = name
+
+      <span class="hljs-keyword">switch</span> transactionType
+        <span class="hljs-keyword">when</span> IMPLICIT <span class="hljs-keyword">then</span> self.startImplicit()
+        <span class="hljs-keyword">when</span> NEW <span class="hljs-keyword">then</span> self.create()
+        <span class="hljs-keyword">when</span> AUTO <span class="hljs-keyword">then</span> self.createAutocommit()
+        <span class="hljs-keyword">when</span> transactionType <span class="hljs-keyword">instanceof</span> Transaction
+          self.merge(transactionType)
+        <span class="hljs-keyword">else</span>
+          <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"unknown transaction type <span class="hljs-subst">#{transactionType}</span>"</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Start an implicit transaction. </p>
+<p>If there are no processing transactions, we convert to an explicit top-level
+transaction. Otherwise, we wait to be told what our enclosing transaction is —
+either some other transaction, in which case we become a sub-transaction, or
+nothing, in which case we become a top-level transaction.</p>
+<p>We save implicit transactions on a queue, so that first waiter can be
+promoted when all top-level transactions have finished processing.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">startImplicit</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> _.size(Transaction.processing) == <span class="hljs-number">0</span>
+      <span class="hljs-property">@create</span>()
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-property">@state</span> = <span class="hljs-string">'implicit'</span>
+      self = <span class="hljs-keyword">this</span>
+      Transaction.implicit.push self
+      <span class="hljs-property">@promise</span> = Request.ask({<span class="hljs-property">@adapter</span>}, self.name)
+      .<span class="hljs-keyword">finally</span> -&gt;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> self.state == <span class="hljs-string">'implicit'</span>
+        Transaction.implicit.splice(
+          Transaction.implicit.indexOf(self), <span class="hljs-number">1</span>)
+      .<span class="hljs-keyword">then</span> (transaction)-&gt;
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> self.state == <span class="hljs-string">'implicit'</span>
+        <span class="hljs-keyword">return</span> self.merge(transaction) <span class="hljs-keyword">if</span> transaction?
+        self.create()
+      <span class="hljs-keyword">return</span> <span class="hljs-property">@promise</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Start top-level transaction.</p>
+<p>Put ourselves on the global processing list so new implicit transactions
+know they might be told they are subordinate. Then we get a client
+from the adapter and execute the transaction.</p>
+<p><strong>TODO</strong> The Following Still Not Working (code in comment)</p>
+<p>Also check that we aren’t wrapped by another transaction: we listen
+for an enclosing transaction and reject if one replies. In theory
+this mechanism might not be successful, as reply could come after
+we have completed. In practice, however, the only delay in getting
+a transaction is a <code>process.nexttick</code> call to allow enclosing (but
+synchronous) time to register <code>progressed</code> handler. If we do any
+asynchronous operation at all, we should receive word of enclosing
+transaction before we complete.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">create</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-property">@state</span> = <span class="hljs-string">'prepared'</span>
+    self = <span class="hljs-keyword">this</span>
+    Transaction.processing[self.name] = self
+    <span class="hljs-keyword">return</span> Promise.using <span class="hljs-property">@adapter</span>.getClient(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+        self.execute(client)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <h1 id="-">#</h1>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> Promise.any([
+      (Promise.using adapter.getClient(), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+        self.execute(client)),
+      requestTransaction(self.name).<span class="hljs-keyword">then</span> (transaction)-&gt;
+        _ENCLOSING.name = tranaction.name
+        <span class="hljs-keyword">return</span> _ENCLOSING
+    ]).<span class="hljs-keyword">then</span> (res)-&gt;
+      <span class="hljs-keyword">if</span> res == _ENCLOSING
+        <span class="hljs-keyword">delete</span> Transaction.processing[self.name]
+        name = _ENCLOSING.name
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(
+          <span class="hljs-string">"Cannot start top-level transaction in enclosing transaction <span class="hljs-subst">#{name}</span>"</span>)
+      <span class="hljs-keyword">return</span> res</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <h1 id="-">#</h1>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Start subordinate transaction. Note that we use <code>takeClient</code> so that
+enclosing transaction cannot interleave other queries.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">merge</span>: <span class="hljs-function"><span class="hljs-params">(enclosingTransaction)</span>-&gt;</span>
+    <span class="hljs-property">@state</span> = <span class="hljs-string">'merged'</span>
+    Transaction.logger.debug(<span class="hljs-string">"<span class="hljs-subst">#{<span class="hljs-property">@name</span>.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>)}</span> MERGE WITH <span class="hljs-subst">#{enclosingTransaction.name.slice(<span class="hljs-number">0.4</span>)}</span>"</span>)
+    self = <span class="hljs-keyword">this</span>
+    <span class="hljs-property">@isSubtransaction</span> = <span class="hljs-literal">true</span>
+    Promise.using enclosingTransaction.takeClient(<span class="hljs-property">@name</span>), <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+      self.execute(client)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Execute the transaction.             </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">execute</span>: <span class="hljs-function"><span class="hljs-params">(client)</span>-&gt;</span>
+    <span class="hljs-property">@state</span> = <span class="hljs-string">'executing'</span>
+    self = <span class="hljs-keyword">this</span>
+    {clientMethods, clientDataAttributes} = <span class="hljs-property">@adapter</span>.features.xwrap
+    <span class="hljs-property">@_client</span> = <span class="hljs-keyword">new</span> AsyncProxyPool(
+      [client], clientMethods, clientDataAttributes)
+    self.openTransaction().<span class="hljs-keyword">then</span> -&gt;
+      Request.handle(
+        self, self.callback(self), self.adapter.id)
+    .<span class="hljs-keyword">catch</span> (err)-&gt;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>NB: either way this throws an error so commit() not called</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      self.rollback().<span class="hljs-keyword">then</span> -&gt;
+        <span class="hljs-keyword">throw</span> err
+    .<span class="hljs-keyword">then</span> (res)-&gt;
+      self.commit().<span class="hljs-keyword">then</span> -&gt;
+        <span class="hljs-keyword">return</span> res</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>On completion, take self off stack of processing transactions.
+If there are no transactions currently processing, then first
+implicit transaction must in fact not be wrapped, so tell it so.</p>
+<p><strong>TODO</strong> this assumes that outer must be created before inner, which
+is probably correct but seems suspicious. Also, many transactions
+may have to wait unnecessarily as we don’t know relation between implicit.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">complete</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-property">@state</span> = <span class="hljs-string">'completed'</span>
+    <span class="hljs-keyword">delete</span> Transaction.processing[<span class="hljs-property">@name</span>]
+    <span class="hljs-property">@_client</span> = <span class="hljs-literal">null</span>          
+    <span class="hljs-keyword">if</span> _.size(Transaction.processing) &gt; <span class="hljs-number">0</span>
+      <span class="hljs-keyword">return</span>
+
+    implicit = Transaction.implicit.shift()
+    <span class="hljs-keyword">if</span> implicit?
+      Request.handleRequest <span class="hljs-literal">null</span>, implicit.promise,
+        <span class="hljs-attribute">adapter</span>: <span class="hljs-property">@adapter</span>
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">while</span> Transaction.unanswered.length &gt; <span class="hljs-number">0</span>
+        request = Transaction.unanswered.pop()
+        request.fulfill(<span class="hljs-literal">null</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Open transaction or subtransaction on adapter. </p>
+<p>If this is a subtransaction and the adapter does not support subtransactions,
+this is a noop.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">openTransaction</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    Transaction.logger.debug(<span class="hljs-string">"OPEN TR"</span>, <span class="hljs-property">@name</span>.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
+    Promise.using <span class="hljs-property">@takeClient</span>(<span class="hljs-property">@name</span>), <span class="hljs-function"><span class="hljs-params">(client)</span>=&gt;</span>
+      Transaction.logger.trace(<span class="hljs-string">"OPEN: Got client"</span>, client.name)
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@isSubtransaction</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-property">@adapter</span>.features.xwrap.subtransactions
+          <span class="hljs-property">@adapter</span>.openSubTransaction(client, <span class="hljs-property">@name</span>)
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-property">@adapter</span>.openTransaction(client)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Commit transaction or sub-transaction on adapter.</p>
+<p>If this is a subtransaction and the adapter does not support subtransactions,
+this is a noop.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">commit</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    Promise.using( <span class="hljs-property">@takeClient</span>(<span class="hljs-property">@name</span>), <span class="hljs-function"><span class="hljs-params">(client)</span>=&gt;</span>
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@isSubtransaction</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-property">@adapter</span>.features.xwrap.subtransactions
+          <span class="hljs-property">@adapter</span>.commitSubTransaction(client, <span class="hljs-property">@name</span>)
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-property">@adapter</span>.commitTransaction(client)
+    ).<span class="hljs-keyword">finally</span> =&gt;
+      <span class="hljs-property">@complete</span>()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Commit transaction or sub-transaction on adapter.</p>
+<p>If this is a subtransaction and the adapter does not support subtransactions,
+this is a noop.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">rollback</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    Promise.using( <span class="hljs-property">@takeClient</span>(<span class="hljs-property">@name</span>), <span class="hljs-function"><span class="hljs-params">(client)</span>=&gt;</span>
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@isSubtransaction</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-property">@adapter</span>.features.xwrap.subtransactions
+          <span class="hljs-property">@adapter</span>.rollbackSubTransaction(client, <span class="hljs-property">@name</span>)
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-property">@adapter</span>.rollbackTransaction(client)
+    ).<span class="hljs-keyword">finally</span> =&gt;
+      <span class="hljs-property">@complete</span>()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Get the transaction client. Wrap in <code>Promise.using</code> to ensure that
+transaction gets client back when you are through!</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">takeClient</span>: <span class="hljs-function"><span class="hljs-params">(name)</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@state</span> != <span class="hljs-string">'executing'</span>
+      <span class="hljs-keyword">return</span> Promise.reject <span class="hljs-keyword">new</span> Error(
+        <span class="hljs-string">'Cannot get client from non-executing transaction.'</span>)
+    Transaction.logger.debug(<span class="hljs-string">'taking client:'</span>, name)
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@_client</span>.use()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Get a shared proxy for the transaction client.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">client</span>: <span class="hljs-function"><span class="hljs-params">(name)</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@state</span> != <span class="hljs-string">'executing'</span>
+      <span class="hljs-keyword">return</span> Promise.reject <span class="hljs-keyword">new</span> Error(
+        <span class="hljs-string">'Cannot get client from non-executing transaction.'</span>)
+    Transaction.logger.debug(<span class="hljs-string">'sharing client:'</span>, name)
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@_client</span>.share()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Set unanswered request handler: if there are no transaction,
+return null. Otherwise, queue up in case requester is
+inside and hasn’t got news yet.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  Request.handleUnanswered = <span class="hljs-function"><span class="hljs-params">(request)</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> !request.deferred?.promise.isPending()
+      Request.logger.debug(<span class="hljs-string">"unhandled, not pending:"</span>, request.name ? <span class="hljs-string">'????'</span>)
+      <span class="hljs-keyword">return</span> 
+    <span class="hljs-keyword">if</span> _.size(Transaction.processing) &gt; <span class="hljs-number">0</span> || Transaction.implicit.length &gt; <span class="hljs-number">0</span>
+      Transaction.unanswered.push request
+      <span class="hljs-keyword">if</span> GLOBAL_TIMEOUT?
+        setTimeout -&gt;
+          <span class="hljs-keyword">if</span> request.deferred?.promise.isPending()
+            Request.logger.error(<span class="hljs-string">"UNANSWERED TRANSACTION REQUEST"</span>)
+            request.reject <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"Couldn't handle unanswered transaction request"</span>)
+        , GLOBAL_TIMEOUT            
+      <span class="hljs-keyword">else</span>
+<span class="hljs-function">        <span class="hljs-title">check</span> = -&gt;</span>
+          setTimeout -&gt;
+            <span class="hljs-keyword">if</span> !request.deferred?.promise.isPending()
+              _.remove(Transaction.unanswered, <span class="hljs-function"><span class="hljs-params">(i)</span>-&gt;</span> i == request)
+            <span class="hljs-keyword">else</span>
+              check()
+          , <span class="hljs-number">1000</span>
+        check()
+
+    <span class="hljs-keyword">else</span>
+      Request.logger.info(<span class="hljs-string">"no transactions: fulfill with null"</span>)
+      request.fulfill(<span class="hljs-literal">null</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>Writes a periodic count of transaction status for debugging.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  deathticks = MAX_REQUEST_IN_TRANSACTION / TICKER_REPEAT
+<span class="hljs-function">  <span class="hljs-title">transactionTicker</span> = <span class="hljs-params">(repeat)</span>-&gt;</span>
+    old = []
+<span class="hljs-function">    <span class="hljs-title">tick</span> = -&gt;</span>
+      setTimeout -&gt;
+<span class="hljs-function">        <span class="hljs-title">str</span> = <span class="hljs-params">(list)</span>-&gt;</span>
+          list.map (i)-&gt;i.name?.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>) ? <span class="hljs-string">'????'</span>
+          .join <span class="hljs-string">' '</span>
+        processing = str(_.values(Transaction.processing))
+        implicit = str(Transaction.implicit)
+        requests = str(Transaction.unanswered)
+        Request.logger.info(<span class="hljs-string">"Transactions: PRC: <span class="hljs-subst">#{processing}</span> "</span> + 
+          <span class="hljs-string">"IMP: <span class="hljs-subst">#{implicit}</span> REQ: <span class="hljs-subst">#{requests}</span>"</span>)
+        Transaction.unanswered.slice().map (r, i)-&gt;
+          <span class="hljs-keyword">if</span> !r.deferred?.promise.isPending()
+            Transaction.unanswered.splice(i, <span class="hljs-number">1</span>)
+            <span class="hljs-keyword">return</span>
+          oi = _.findIndex old, <span class="hljs-function"><span class="hljs-params">(o)</span>-&gt;</span>o.request == r
+          <span class="hljs-keyword">if</span> oi != -<span class="hljs-number">1</span>
+            o = old[oi]
+            o.ticks += <span class="hljs-number">1</span>
+            <span class="hljs-keyword">if</span> o.ticks &gt; deathticks
+              o.request.reject <span class="hljs-keyword">new</span> Error(<span class="hljs-string">'Waited too long'</span>)
+              old.splice(oi, <span class="hljs-number">1</span>)
+          <span class="hljs-keyword">else</span>
+            old.push { <span class="hljs-attribute">request</span>: r, <span class="hljs-attribute">ticks</span>: <span class="hljs-number">0</span> }
+        tick()
+      , repeat
+    tick()
+  transactionTicker(TICKER_REPEAT)
+
+
+<span class="hljs-built_in">module</span>.exports = Transaction</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

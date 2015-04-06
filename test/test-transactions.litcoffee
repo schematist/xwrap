@@ -3,30 +3,26 @@ Test transactions
 
     Promise = require 'bluebird'
     _ = require 'lodash'
-    {should, sinon} = require './base'
-    {NEW, BASIC_INTERFACE, SUBTRANSACTION_INTERFACE
-      } = require '../src/transaction'
+    {should, sinon, logger} = require './base'
+    xwrap = require '../src/xwrap'
 
     spies = {}
     db = null
     Post = null
     describe 'transactions', ->
+      adapter = xtransaction = clients = query = null
+      IMPLICIT = NEW = AUTO = null
 
 Start adapter and create a model. Skip suite if tranactions aren't  supported by
 the adapter. Otherwise instrument adapter transaction interface.
 
       before ->
-        db = getSchema()
-        if !db.features.transactions.basic
+        {xtransaction, query} = global.getXWrap()      
+        {IMPLICIT, NEW, AUTO, adapter} = xtransaction
+
+        if !adapter.features.xwrap.basic
           return @skip()
-        Post = db.define('Post', 
-          'subject': String
-        )
-        instrumentAdapter(db.adapter)
-        db.automigrate().then ->
-          db.enableTransactions()
-
-
+        instrumentAdapter(adapter)
 
 Remove spies from adapter after all tests complete.
 
@@ -36,25 +32,25 @@ Remove spies from adapter after all tests complete.
 
       describe 'basic', ->
         beforeEach ->
-          if !db.features.transactions.basic
+          if !adapter.features.transactions.basic
             @skip()
-          console.log("RESET")
+          logger.trace("RESET")
           resetSpies()
 
         it 'wraps database use in transaction open/close', ->
-          getSpyTransaction ()->
-            console.log('create')
-            Post.create()
+          getSpyTransaction (client)->
+            logger.trace('create')
+            query(client, 'create')
           .then (client)->
             checkTransactionWrapped(client)
 
-        it 'reveals created objects inside before commit', ->
+        it.skip 'reveals created objects inside before commit', ->
 
-        it 'hide created object from outside before commit', ->
+        it.skip 'hide created object from outside before commit', ->
 
-        it 'removes created object on rollback', ->
+        it.skip 'removes created object on rollback', ->
 
-        it 'allows separate transactions to proceed in parallel', ->
+        it.skip 'allows separate transactions to proceed in parallel', ->
 
       describe 'sub-transactions', ->
         beforeEach ->
@@ -69,14 +65,14 @@ Remove spies from adapter after all tests complete.
 
         it.skip 'serializes subtransaction of single transaction', ->
 
-    getSpyTransaction = (callback)->
+    getSpyClient = (callback)->
       client = null
       db.transaction NEW, (transaction)=>
         spies.trClient = sinon.spy transaction, 'getClient'
         Promise.using transaction.getClient(), (c)->
           client = c
         .then ->
-          callback()
+          callback(c)
         .then ->
           return client 
 
