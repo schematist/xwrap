@@ -81,7 +81,7 @@ change.
 
 ## How does it work?
 
-See [transactions and promises](../transactions-and-promises)
+See [transactions and promises][2]
 
 # Status
 
@@ -294,7 +294,9 @@ wrapping.
 
 # Promises and Progress
 
-## OH NO! Progress might be going away! [Learn how xwrap works, and why progress is such a good idea.](./transactions-and-promises)
+## OH NO! Progress might be going away! [Learn how xwrap works, and why progress is such a good idea.][2]
+
+[2] https://github.com/schematist/xwrap/blob/master/transactions-and-promises.md
 
 # Testing
 
