@@ -8,7 +8,7 @@ docs/%.html: src/%.litcoffee
 	node_modules/.bin/docco -o $(@D) $^
 
 lib/%.js: src/%.litcoffee
-	coffee -o $@ $<
+	coffee -c -o $(@D) $<
 
 #sources.md: $(DOCS)
 #	d

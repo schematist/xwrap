@@ -1,6 +1,9 @@
 Test transactions
 =================
 
+These tests are indended to test an adapter, passing if the wrapped 
+transactions are ACID. It needs much work.
+
     Promise = require 'bluebird'
     _ = require 'lodash'
     {should, sinon, logger} = require './base'
@@ -37,7 +40,7 @@ Remove spies from adapter after all tests complete.
           logger.trace("RESET")
           resetSpies()
 
-        it 'wraps database use in transaction open/close', ->
+        it.skip 'wraps database use in transaction open/close', ->
           getSpyTransaction (client)->
             logger.trace('create')
             query(client, 'create')
@@ -118,3 +121,4 @@ protocol is followed.
       [0...trClient.callCount].map (i)->
         spyPromiseValue('trClient', i).should.equal client
 
+[**Home**](./index.html)

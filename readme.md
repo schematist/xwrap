@@ -1,9 +1,12 @@
+
 Wrap asynchronous database calls in transactions, using
 nodejs and promises.
 
+https://github.com/schematist/xwrap
+
 # Installation
 
-npm install xwrap
+    npm install xwrap
 
 # What it does
 
@@ -297,6 +300,4 @@ It needs a lot of work to be functional, still -- in particular it needs abstrac
 (instatiated per adapter) to test "doing something" with the database, and checking the
 database state afterwards.
 
-# Source Documentation
 
-* [xwrap](./docs/xwrap.html)

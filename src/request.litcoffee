@@ -126,3 +126,6 @@ default, but currently is overridden by the transaction manager.
         request.fulfill(null)
 
     module.exports = Request
+
+[**Home**](./index.html)
+    

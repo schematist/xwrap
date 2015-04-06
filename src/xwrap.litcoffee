@@ -1,11 +1,14 @@
 XWrap Transaction Manager
 =========================
 
-Implements transaction management using two classes: `Transaction`
-which represents transactions themselves, and `Request` which represent
+Implements transaction management using two classes: [`Transaction`](1)
+which represents transactions themselves, and [`Request`](2) which represent
 requests for transactions, and wrap requests for database clients.
 
-It exports a facade, to these, defined at the bottom of the
+[1] ./transaction.html
+[2] ./request.html
+
+It exports a facade defined in this file.
 
     Promise = require 'bluebird'
     _ = require 'lodash'
@@ -168,5 +171,5 @@ Add xwrap interface to initializer function.
     initializer.useLogger = (logger_)->
       Request.logger = Transaction.logger = logger = logger_
 
-
+[**Home**](./index.html)
 
