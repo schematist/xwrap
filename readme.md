@@ -18,10 +18,10 @@ If you use a database tool that does not itself use transactions, but:
 1. depends on a database connection package that keeps a pool of clients 
 (such as [node postgres](https://github.com/brianc/node-postgres)),
 
-2. Which uses promises that support the progress interface.
+2. uses promises which support the progress interface;
 
-xwrap will let you wrap calls that tool in transactions (and savepoints, if
-supported by the backend) without having to modify the tools.
+then xwrap will let you wrap calls that tool in transactions (and savepoints,
+if supported by the backend) without having to modify the tools.
 
 If the tools use xwrap themselves, any transactions they create will
 automatically be converted into savepoints if wrapped by your transactions.
@@ -29,17 +29,16 @@ automatically be converted into savepoints if wrapped by your transactions.
 # Quick Start
 
     Promise = require 'bluebird'
-    {XRequest, initialize} = require 'xwrap'
-    xwrap = initialize(
+    xwrap = require 'xwrap'
+    xtransaction = xwrap(
       'pg', { url: 'postgres://username:password@localhost/database'})
-
 
 The promise chain in this callback will be wrapped in a transaction
 the three transactions will proceed in parallel on different
 clients, or be serialized when the pool runs out of clients.
     
     Promise.map [1..3], ->
-      xwrap ->
+      xtransaction ->
         foo().then (rows)->
           Promise.map rows, (row, i)->
             bar(row, i)
@@ -54,7 +53,7 @@ by you and/or the need for the client could be deeply buried, making explicit
 passing of client undesirable.
 
     foo = ->
-      XRequest.client().then (client)->
+      xwrap.client().then (client)->
         client.queryAsync('select * from foo')
       .then ({rows})->
         return rows
@@ -63,13 +62,13 @@ Within a transaction, calls to `bar` are in parallel, but the client request ser
 the database itself, if the transactions hold locks).
 
     bar = ->
-      XRequest.client().then (client)->
+      xwrap.client().then (client)->
 
     baz = ->
-      xwrap ->
+      xtransaction ->
         # this creates a savepoint; if called outside a transaction
         # it would create a top-level transaction.
-        XRequest().client().then (client)->
+        xwrap.client().then (client)->
           ...
           throw new Error('Baz!')
 
@@ -79,6 +78,14 @@ Suppose you have been using a package that provides a reporting interface,
 or an ORM, etc. If these packages don't use transactions, but use promises
 which support the progress interface, you can continue using them without 
 change.
+
+## How does it work?
+
+See [transactions and promises](../transactions-and-promises)
+
+# Status
+
+Just starting!
 
 # API Documentation
 
@@ -287,7 +294,7 @@ wrapping.
 
 # Promises and Progress
 
-## OH NO! Progress might be going away! Learn how xwrap works, and why progress is such a good idea.
+## OH NO! Progress might be going away! [Learn how xwrap works, and why progress is such a good idea.](./transactions-and-promises)
 
 # Testing
 

@@ -53,7 +53,7 @@ still synchronous. So if we delay one tick we should be assured of
 receiving transaction if it exists. Thus, if we wait one tick more
 and still haven't got a transaction, we assume there is no wrapper.
 
-      getTransaction: ()->
+      getTransaction: ->
         self = this
         @deferred = d = Promise.defer()
         Request.logger.debug("ASK #{@name}")
@@ -128,4 +128,3 @@ default, but currently is overridden by the transaction manager.
     module.exports = Request
 
 [**Home**](./index.html)
-    

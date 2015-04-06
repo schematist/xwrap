@@ -1,8 +1,8 @@
 XWrap Transaction Manager
 =========================
 
-Implements transaction management using two classes: [`Transaction`](1)
-which represents transactions themselves, and [`Request`](2) which represent
+Implements transaction management using two classes: [`Transaction`][1]
+which represents transactions themselves, and [`Request`][2] which represent
 requests for transactions, and wrap requests for database clients.
 
 [1] ./transaction.html
