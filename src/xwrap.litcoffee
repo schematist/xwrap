@@ -184,7 +184,8 @@ Add xwrap interface to initializer function.
 
     initializer.disconnect = (id)->
       adapter = getAdapter(id)
-      adapters.disconnect()
+      return if !adapter?
+      adapter?.disconnect()
       if id?
         delete adapters[id]
       else
