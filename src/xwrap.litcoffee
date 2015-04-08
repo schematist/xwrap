@@ -18,6 +18,15 @@ It exports a facade defined in this file.
     Logger = require 'logger-facade-nodejs'
     fs = require 'fs'
 
+Logger output: if not otherwise configured, output to console, level "WARN"
+
+    if Logger.plugins().length == 0
+      Logger.use new (require 'logger-facade-console-plugin-nodejs') {
+        level: 'info'
+        timeFormat: 'MM:ss.SSS'
+        messageFormat: "%time: %logger: %msg"
+      }
+
 By default, we use logger named "xwrap". Override using "setLogger"
 function.
 
@@ -67,7 +76,6 @@ order of the callback.
         newTransaction = new Transaction({callback, name, adapter, id})
         type ?= IMPLICIT
         return newTransaction.start(type)
-        return newTransaction
       adapter = resolveAdapter(adapterName, settings, id)
       adapter.id = id
       adapter.xtransaction = xtransaction
@@ -152,6 +160,16 @@ Check adapter for interfaces, and set features if not set.
             break
         xwrapFeatures[api] = !missing
 
+Return adapter for id, or "the" adapter if there is only one
+
+    getAdapter = (id)->
+      return adapters[id] if id?
+      switch _.size(adapters)
+        when 1 then return _.values(adapters)[0]
+        when 0 then null
+        else
+          throw new Error('Must specify adapter id when more than one.')
+
 Add xwrap interface to initializer function.
 
     initializer.client = (id, callerName)->
@@ -160,9 +178,18 @@ Add xwrap interface to initializer function.
     initializer.takeClient = (id, callerName)->
       return new Request.takeClient(id, callerName)
 
+    initializer.xtransaction = (id, callerName)->
+      adapter = getAdapter(id)
+      adapter.xtransaction
+
     initializer.disconnect = (id)->
-      adapters[id]?.disconnect()
-      delete adapters[id]
+      adapter = getAdapter(id)
+      adapters.disconnect()
+      if id?
+        delete adapters[id]
+      else
+        # must be only one or "getAdapter" will raise an error
+        delete adapters[Object.keys(adapters)[0]]
 
     initializer.NEW = NEW
     initializer.SUB = SUB

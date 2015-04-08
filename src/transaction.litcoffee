@@ -44,8 +44,7 @@ List of unanswered transaction requests waiting to see if enclosed.
 
       @unanswered = []
 
-      constructor: ({@callback, name, @adapter, @id})->
-        @name = name
+      constructor: ({@callback, @name, @adapter, @id})->
         @state = 'initial'
         @subtransactions = []
         @_client = null
@@ -70,6 +69,10 @@ Start the transaction up -- depending on the type.
               self.merge(transactionType)
             else
               throw new Error("unknown transaction type #{transactionType}")
+        .catch (err)->
+          Transaction.logger.error("error during transaction #{self.name}: #{err}")
+          throw err
+
 
 Start an implicit transaction. 
 
@@ -88,8 +91,7 @@ promoted when all top-level transactions have finished processing.
           @state = 'implicit'
           self = this
           Transaction.implicit.push self
-          @promise = Request.ask({@adapter}, self.name)
-          .finally ->
+          return Request.ask({@adapter}, self.name).finally ->
             return unless self.state == 'implicit'
             Transaction.implicit.splice(
               Transaction.implicit.indexOf(self), 1)
@@ -97,7 +99,6 @@ promoted when all top-level transactions have finished processing.
             return unless self.state == 'implicit'
             return self.merge(transaction) if transaction?
             self.create()
-          return @promise
 
 Start top-level transaction.
 
@@ -122,6 +123,7 @@ transaction before we complete.
         Transaction.processing[self.name] = self
         return Promise.using @adapter.getRawClient(), (client)->
             self.execute(client)
+            
         ###
         return Promise.any([
           (Promise.using adapter.getRawClient(), (client)->
@@ -158,8 +160,9 @@ Execute the transaction.
         @_client = new AsyncProxyPool(
           [client], clientMethods, clientDataAttributes)
         self.openTransaction().then ->
+          callback = Promise.method(self.callback)
           Request.handle(
-            self, self.callback(self), self.adapter.id)
+            self, callback.call(self, self), self.adapter.id)
         .catch (err)->
           # NB: either way this throws an error so commit() not called
           self.rollback().then ->
@@ -285,10 +288,11 @@ inside and hasn't got news yet.
             check()
 
         else
-          Request.logger.info("no transactions: fulfill with null")
+          Request.logger.debug("no transactions: fulfill with null")
           request.fulfill(null)
 
-Writes a periodic count of transaction status for debugging.
+Writes a periodic count of transaction status for debugging. Depending
+on setting, throws an error if a request has waited too long.
 
       deathticks = MAX_REQUEST_IN_TRANSACTION / TICKER_REPEAT
       transactionTicker = (repeat)->
@@ -296,7 +300,7 @@ Writes a periodic count of transaction status for debugging.
         tick = ->
           setTimeout ->
             str = (list)->
-              list.map (i)->i.name?.slice(0, 4) ? '????'
+              list.map (i)->i.name?.slice(0, 5) ? '????'
               .join ' '
             processing = str(_.values(Transaction.processing))
             implicit = str(Transaction.implicit)

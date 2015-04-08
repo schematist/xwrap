@@ -27,17 +27,17 @@ Wrapper around `new Request`, then `getTransaction`
       @ask: (id, name)->
         (new Request id, name).getTransaction()
 
-Get a shared client in a transaction.
+Get a shared client in a transaction; returns `null` if no transaction.
 
       @client: (id, name)->
         return Request.ask(id, name).then (transaction)-> 
-          transaction.client()
+          transaction?.client() ? null
 
 Checkout client from transaction.
 
       @takeClient: (id, name)->
         return Request.ask(id, name.then) (transaction)->
-          transaction.takeClient()
+          transaction?.takeClient() ? null
 
       constructor: (@id, @name)->
         __requestNumber += 1
@@ -69,6 +69,7 @@ and still haven't got a transaction, we assume there is no wrapper.
         # stack trace in case handler causes us to reject.
         err = new Error("cancelled")
         return d.promise.catch (cerr)->
+          Request.logger.error(cerr.stack ? cerr)
           err.cancel = cerr
           throw err
 
@@ -98,12 +99,14 @@ fulfill requests. `transaction` should be the current transaction.
 to fulfill transaction requests. `id`, if passed,
 will be used to match requests. 
 
+**NB** "progressed" seems not to chain exception stacks correctly.
+
       @handle: (transaction, promise, id)->
         Request.logger.debug("HANDLE BY", transaction.name.slice(0,4))
         if !promise? or !promise.progressed?
           throw new Error("Cannot pass transaction: no promise; got #{promise}")
 
-        promise.progressed (request)->
+        return promise.progressed (request)->
           # unwrap -- annoying oddity
           while request.value?
             request = request.value
@@ -116,7 +119,6 @@ will be used to match requests.
           Request.logger.debug(
             "REQ-#{request.name} doesn't match", transaction.name.slice(0,4))
           return
-        return promise
 
 Handle unanswered by passing a null transaction. This could be a useful
 default, but currently is overridden by the transaction manager.
