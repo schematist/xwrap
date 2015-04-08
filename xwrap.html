@@ -58,6 +58,26 @@ fs = <span class="hljs-built_in">require</span> <span class="hljs-string">'fs'</
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
+              <p>Logger output: if not otherwise configured, output to console, level “WARN”</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">if</span> Logger.plugins().length == <span class="hljs-number">0</span>
+  Logger.use <span class="hljs-keyword">new</span> (<span class="hljs-built_in">require</span> <span class="hljs-string">'logger-facade-console-plugin-nodejs'</span>) {
+    <span class="hljs-attribute">level</span>: <span class="hljs-string">'info'</span>
+    <span class="hljs-attribute">timeFormat</span>: <span class="hljs-string">'MM:ss.SSS'</span>
+    <span class="hljs-attribute">messageFormat</span>: <span class="hljs-string">"%time: %logger: %msg"</span>
+  }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
               <p>By default, we use logger named “xwrap”. Override using “setLogger”
 function.</p>
 
@@ -72,11 +92,11 @@ adapters = {}</pre></div></div>
         </li>
         
         
-        <li id="section-4">
+        <li id="section-5">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
+                <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
               <p>All aruments can be passed in a hash. If the first argument is not a hash,
 then, arguments are interpreted based on which argument is callable: the
@@ -122,7 +142,6 @@ Specify for logging and debugging.</p>
     newTransaction = <span class="hljs-keyword">new</span> Transaction({callback, name, adapter, id})
     type ?= IMPLICIT
     <span class="hljs-keyword">return</span> newTransaction.start(type)
-    <span class="hljs-keyword">return</span> newTransaction
   adapter = resolveAdapter(adapterName, settings, id)
   adapter.id = id
   adapter.xtransaction = xtransaction
@@ -134,11 +153,11 @@ Specify for logging and debugging.</p>
         </li>
         
         
-        <li id="section-5">
+        <li id="section-6">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-5">&#182;</a>
+                <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
               <p>add a full xwrap interface to transaction, but specialized
 to the id of the adapter.</p>
@@ -170,11 +189,11 @@ to the id of the adapter.</p>
         </li>
         
         
-        <li id="section-6">
+        <li id="section-7">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-6">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <p>Load and initialize an adapter, given name, settings and ID.</p>
 
@@ -206,11 +225,11 @@ to the id of the adapter.</p>
         </li>
         
         
-        <li id="section-7">
+        <li id="section-8">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <p>Check adapter for interfaces, and set features if not set.</p>
 
@@ -244,11 +263,32 @@ WRAP_INTERACE = [<span class="hljs-string">'wrap'</span>]
         </li>
         
         
-        <li id="section-8">
+        <li id="section-9">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Return adapter for id, or “the” adapter if there is only one</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">getAdapter</span> = <span class="hljs-params">(id)</span>-&gt;</span>
+  <span class="hljs-keyword">return</span> adapters[id] <span class="hljs-keyword">if</span> id?
+  <span class="hljs-keyword">switch</span> _.size(adapters)
+    <span class="hljs-keyword">when</span> <span class="hljs-number">1</span> <span class="hljs-keyword">then</span> <span class="hljs-keyword">return</span> _.values(adapters)[<span class="hljs-number">0</span>]
+    <span class="hljs-keyword">when</span> <span class="hljs-number">0</span> <span class="hljs-keyword">then</span> <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">'Must specify adapter id when more than one.'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <p>Add xwrap interface to initializer function.</p>
 
@@ -260,9 +300,32 @@ WRAP_INTERACE = [<span class="hljs-string">'wrap'</span>]
 initializer.takeClient = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
   <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Request.takeClient(id, callerName)
 
+initializer.xtransaction = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
+  adapter = getAdapter(id)
+  adapter.xtransaction
+
 initializer.disconnect = <span class="hljs-function"><span class="hljs-params">(id)</span>-&gt;</span>
-  adapters[id]?.disconnect()
-  <span class="hljs-keyword">delete</span> adapters[id]
+  adapter = getAdapter(id)
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> !adapter?
+  adapter?.disconnect()
+  <span class="hljs-keyword">if</span> id?
+    <span class="hljs-keyword">delete</span> adapters[id]
+  <span class="hljs-keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>must be only one or “getAdapter” will raise an error</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">delete</span> adapters[Object.keys(adapters)[<span class="hljs-number">0</span>]]
 
 initializer.NEW = NEW
 initializer.SUB = SUB
@@ -279,11 +342,11 @@ initializer.useLogger = <span class="hljs-function"><span class="hljs-params">(l
         </li>
         
         
-        <li id="section-9">
+        <li id="section-12">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <p><a href="./index.html"><strong>Home</strong></a></p>
 

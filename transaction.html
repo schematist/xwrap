@@ -111,8 +111,7 @@ AsyncProxyPool = <span class="hljs-built_in">require</span> <span class="hljs-st
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@unanswered</span> = []
 
-  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">({<span class="hljs-property">@callback</span>, name, <span class="hljs-property">@adapter</span>, <span class="hljs-property">@id</span>})</span>-&gt;</span>
-    <span class="hljs-property">@name</span> = name
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">({<span class="hljs-property">@callback</span>, <span class="hljs-property">@name</span>, <span class="hljs-property">@adapter</span>, <span class="hljs-property">@id</span>})</span>-&gt;</span>
     <span class="hljs-property">@state</span> = <span class="hljs-string">'initial'</span>
     <span class="hljs-property">@subtransactions</span> = []
     <span class="hljs-property">@_client</span> = <span class="hljs-literal">null</span>
@@ -147,7 +146,10 @@ AsyncProxyPool = <span class="hljs-built_in">require</span> <span class="hljs-st
         <span class="hljs-keyword">when</span> transactionType <span class="hljs-keyword">instanceof</span> Transaction
           self.merge(transactionType)
         <span class="hljs-keyword">else</span>
-          <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"unknown transaction type <span class="hljs-subst">#{transactionType}</span>"</span>)</pre></div></div>
+          <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"unknown transaction type <span class="hljs-subst">#{transactionType}</span>"</span>)
+    .<span class="hljs-keyword">catch</span> (err)-&gt;
+      Transaction.logger.error(<span class="hljs-string">"error during transaction <span class="hljs-subst">#{self.name}</span>: <span class="hljs-subst">#{err}</span>"</span>)
+      <span class="hljs-keyword">throw</span> err</pre></div></div>
             
         </li>
         
@@ -175,16 +177,14 @@ promoted when all top-level transactions have finished processing.</p>
       <span class="hljs-property">@state</span> = <span class="hljs-string">'implicit'</span>
       self = <span class="hljs-keyword">this</span>
       Transaction.implicit.push self
-      <span class="hljs-property">@promise</span> = Request.ask({<span class="hljs-property">@adapter</span>}, self.name)
-      .<span class="hljs-keyword">finally</span> -&gt;
+      <span class="hljs-keyword">return</span> Request.ask({<span class="hljs-property">@adapter</span>}, self.name).<span class="hljs-keyword">finally</span> -&gt;
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> self.state == <span class="hljs-string">'implicit'</span>
         Transaction.implicit.splice(
           Transaction.implicit.indexOf(self), <span class="hljs-number">1</span>)
       .<span class="hljs-keyword">then</span> (transaction)-&gt;
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> self.state == <span class="hljs-string">'implicit'</span>
         <span class="hljs-keyword">return</span> self.merge(transaction) <span class="hljs-keyword">if</span> transaction?
-        self.create()
-      <span class="hljs-keyword">return</span> <span class="hljs-property">@promise</span></pre></div></div>
+        self.create()</pre></div></div>
             
         </li>
         
@@ -300,8 +300,9 @@ enclosing transaction cannot interleave other queries.</p>
     <span class="hljs-property">@_client</span> = <span class="hljs-keyword">new</span> AsyncProxyPool(
       [client], clientMethods, clientDataAttributes)
     self.openTransaction().<span class="hljs-keyword">then</span> -&gt;
+      callback = Promise.method(self.callback)
       Request.handle(
-        self, self.callback(self), self.adapter.id)
+        self, callback.call(self, self), self.adapter.id)
     .<span class="hljs-keyword">catch</span> (err)-&gt;</pre></div></div>
             
         </li>
@@ -524,7 +525,7 @@ inside and hasn’t got news yet.</p>
         check()
 
     <span class="hljs-keyword">else</span>
-      Request.logger.info(<span class="hljs-string">"no transactions: fulfill with null"</span>)
+      Request.logger.debug(<span class="hljs-string">"no transactions: fulfill with null"</span>)
       request.fulfill(<span class="hljs-literal">null</span>)</pre></div></div>
             
         </li>
@@ -536,7 +537,8 @@ inside and hasn’t got news yet.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
-              <p>Writes a periodic count of transaction status for debugging.</p>
+              <p>Writes a periodic count of transaction status for debugging. Depending
+on setting, throws an error if a request has waited too long.</p>
 
             </div>
             
@@ -546,7 +548,7 @@ inside and hasn’t got news yet.</p>
 <span class="hljs-function">    <span class="hljs-title">tick</span> = -&gt;</span>
       setTimeout -&gt;
 <span class="hljs-function">        <span class="hljs-title">str</span> = <span class="hljs-params">(list)</span>-&gt;</span>
-          list.map (i)-&gt;i.name?.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>) ? <span class="hljs-string">'????'</span>
+          list.map (i)-&gt;i.name?.slice(<span class="hljs-number">0</span>, <span class="hljs-number">5</span>) ? <span class="hljs-string">'????'</span>
           .join <span class="hljs-string">' '</span>
         processing = str(_.values(Transaction.processing))
         implicit = str(Transaction.implicit)

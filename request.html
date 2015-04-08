@@ -68,13 +68,13 @@ __requestNumber = <span class="hljs-number">0</span>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <p>Get a shared client in a transaction.</p>
+              <p>Get a shared client in a transaction; returns <code>null</code> if no transaction.</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@client</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
     <span class="hljs-keyword">return</span> Request.ask(id, name).<span class="hljs-keyword">then</span> (transaction)-&gt; 
-      transaction.client()</pre></div></div>
+      transaction?.client() ? <span class="hljs-literal">null</span></pre></div></div>
             
         </li>
         
@@ -91,7 +91,7 @@ __requestNumber = <span class="hljs-number">0</span>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@takeClient</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
     <span class="hljs-keyword">return</span> Request.ask(id, name.<span class="hljs-keyword">then</span>) (transaction)-&gt;
-      transaction.takeClient()
+      transaction?.takeClient() ? <span class="hljs-literal">null</span>
 
   <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@id</span>, <span class="hljs-property">@name</span>)</span>-&gt;</span>
     __requestNumber += <span class="hljs-number">1</span>
@@ -144,6 +144,7 @@ stack trace in case handler causes us to reject.</p>
             
             <div class="content"><div class='highlight'><pre>    err = <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"cancelled"</span>)
     <span class="hljs-keyword">return</span> d.promise.<span class="hljs-keyword">catch</span> (cerr)-&gt;
+      Request.logger.error(cerr.stack ? cerr)
       err.cancel = cerr
       <span class="hljs-keyword">throw</span> err</pre></div></div>
             
@@ -203,6 +204,7 @@ fulfill requests. <code>transaction</code> should be the current transaction.
 <code>promise</code> should be the promise we are wrapping in which
 to fulfill transaction requests. <code>id</code>, if passed,
 will be used to match requests. </p>
+<p><strong>NB</strong> “progressed” seems not to chain exception stacks correctly.</p>
 
             </div>
             
@@ -211,7 +213,7 @@ will be used to match requests. </p>
     <span class="hljs-keyword">if</span> !promise? <span class="hljs-keyword">or</span> !promise.progressed?
       <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"Cannot pass transaction: no promise; got <span class="hljs-subst">#{promise}</span>"</span>)
 
-    promise.progressed (request)-&gt;</pre></div></div>
+    <span class="hljs-keyword">return</span> promise.progressed (request)-&gt;</pre></div></div>
             
         </li>
         
@@ -236,8 +238,7 @@ will be used to match requests. </p>
 
       Request.logger.debug(
         <span class="hljs-string">"REQ-<span class="hljs-subst">#{request.name}</span> doesn't match"</span>, transaction.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
-      <span class="hljs-keyword">return</span>
-    <span class="hljs-keyword">return</span> promise</pre></div></div>
+      <span class="hljs-keyword">return</span></pre></div></div>
             
         </li>
         
