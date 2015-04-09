@@ -96,7 +96,6 @@ promoted when all top-level transactions have finished processing.
             Transaction.implicit.splice(
               Transaction.implicit.indexOf(self), 1)
           .then (transaction)->
-            debugger
             return unless self.state == 'implicit'
             return self.merge(transaction) if transaction?
             self.create()
@@ -195,9 +194,12 @@ relation between implicit and anything outside.
             adapter: @adapter
           # implicit might be in unanswered already -- if so,
           # fulfill directly.
-          for req in Transaction.unanswered
+          for req, i in Transaction.unanswered
             if req.implicit == implicit and req.deferred?.promise.isPending()
               req.fulfill(null)
+              Transaction.unanswered.splice(i, 1)
+              break
+
         else
           # no transactions for these requests
           while Transaction.unanswered.length > 0
