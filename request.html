@@ -56,7 +56,7 @@ __requestNumber = <span class="hljs-number">0</span>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@ask</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@ask</span>: <span class="hljs-function"><span class="hljs-params">(id, name, implicit)</span>-&gt;</span>
     (<span class="hljs-keyword">new</span> Request id, name).getTransaction()</pre></div></div>
             
         </li>
@@ -93,7 +93,7 @@ __requestNumber = <span class="hljs-number">0</span>
     <span class="hljs-keyword">return</span> Request.ask(id, name.<span class="hljs-keyword">then</span>) (transaction)-&gt;
       transaction?.takeClient() ? <span class="hljs-literal">null</span>
 
-  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@id</span>, <span class="hljs-property">@name</span>)</span>-&gt;</span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@id</span>, <span class="hljs-property">@name</span>, <span class="hljs-property">@implicit</span>)</span>-&gt;</span>
     __requestNumber += <span class="hljs-number">1</span>
     <span class="hljs-property">@name</span> = <span class="hljs-string">"?<span class="hljs-subst">#{__requestNumber}</span>"</span> <span class="hljs-keyword">if</span> !<span class="hljs-property">@name</span>?</pre></div></div>
             
@@ -165,7 +165,7 @@ the transaction.</p>
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">fulfill</span>: <span class="hljs-function"><span class="hljs-params">(transaction)</span>-&gt;</span>
     <span class="hljs-keyword">if</span> <span class="hljs-property">@deferred</span>?.promise.isPending()
       Request.logger.debug(
-        <span class="hljs-string">"FULFILL <span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span> by:"</span>, transaction?.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
+        <span class="hljs-string">"FULFILL <span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span> by:"</span>, transaction?.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>), <span class="hljs-string">'---'</span>)
       <span class="hljs-property">@deferred</span>.resolve(transaction)
       <span class="hljs-keyword">delete</span> <span class="hljs-property">@deferred</span></pre></div></div>
             
@@ -209,7 +209,7 @@ will be used to match requests. </p>
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@handle</span>: <span class="hljs-function"><span class="hljs-params">(transaction, promise, id)</span>-&gt;</span>
-    Request.logger.debug(<span class="hljs-string">"HANDLE BY"</span>, transaction.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>))
+    Request.logger.debug(<span class="hljs-string">"HANDLE BY"</span>, transaction?.name.slice(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>) ? <span class="hljs-string">'----'</span>)
     <span class="hljs-keyword">if</span> !promise? <span class="hljs-keyword">or</span> !promise.progressed?
       <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"Cannot pass transaction: no promise; got <span class="hljs-subst">#{promise}</span>"</span>)
 
