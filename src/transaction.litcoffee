@@ -91,11 +91,12 @@ promoted when all top-level transactions have finished processing.
           @state = 'implicit'
           self = this
           Transaction.implicit.push self
-          return Request.ask({@adapter}, self.name).finally ->
+          return @promise = Request.ask(@id, self.name).finally ->
             return unless self.state == 'implicit'
             Transaction.implicit.splice(
               Transaction.implicit.indexOf(self), 1)
           .then (transaction)->
+            debugger
             return unless self.state == 'implicit'
             return self.merge(transaction) if transaction?
             self.create()
@@ -123,7 +124,7 @@ transaction before we complete.
         Transaction.processing[self.name] = self
         return Promise.using @adapter.getRawClient(), (client)->
             self.execute(client)
-            
+
         ###
         return Promise.any([
           (Promise.using adapter.getRawClient(), (client)->
@@ -175,9 +176,10 @@ On completion, take self off stack of processing transactions.
 If there are no transactions currently processing, then first
 implicit transaction must in fact not be wrapped, so tell it so.
 
-**TODO** this assumes that outer must be created before inner, which
-is probably correct but seems suspicious. Also, many transactions
-may have to wait unnecessarily as we don't know relation between implicit.
+**TODO** this assumes that outer must be created before inner, which is
+probably correct but seems suspicious: is it possible to nest but still delay
+outer? Also, many transactions may have to wait unnecessarily as we don't know
+relation between implicit and anything outside.
 
       complete: ()->
         @state = 'completed'
@@ -188,9 +190,16 @@ may have to wait unnecessarily as we don't know relation between implicit.
 
         implicit = Transaction.implicit.shift()
         if implicit?
-          Request.handleRequest null, implicit.promise,
+          # in case not in "unanswered" -- answer
+          Request.handle null, implicit.promise,
             adapter: @adapter
+          # implicit might be in unanswered already -- if so,
+          # fulfill directly.
+          for req in Transaction.unanswered
+            if req.implicit == implicit and req.deferred?.promise.isPending()
+              req.fulfill(null)
         else
+          # no transactions for these requests
           while Transaction.unanswered.length > 0
             request = Transaction.unanswered.pop()
             request.fulfill(null)

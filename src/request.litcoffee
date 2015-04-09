@@ -24,7 +24,7 @@ if there are any outstanding transactions.
 
 Wrapper around `new Request`, then `getTransaction`
 
-      @ask: (id, name)->
+      @ask: (id, name, implicit)->
         (new Request id, name).getTransaction()
 
 Get a shared client in a transaction; returns `null` if no transaction.
@@ -39,7 +39,7 @@ Checkout client from transaction.
         return Request.ask(id, name.then) (transaction)->
           transaction?.takeClient() ? null
 
-      constructor: (@id, @name)->
+      constructor: (@id, @name, @implicit)->
         __requestNumber += 1
         @name = "?#{__requestNumber}" if !@name?
 
@@ -79,7 +79,7 @@ the transaction.
       fulfill: (transaction)->
         if @deferred?.promise.isPending()
           Request.logger.debug(
-            "FULFILL #{@name} by:", transaction?.name.slice(0,4))
+            "FULFILL #{@name} by:", transaction?.name.slice(0,4), '---')
           @deferred.resolve(transaction)
           delete @deferred
 
@@ -102,7 +102,7 @@ will be used to match requests.
 **NB** "progressed" seems not to chain exception stacks correctly.
 
       @handle: (transaction, promise, id)->
-        Request.logger.debug("HANDLE BY", transaction.name.slice(0,4))
+        Request.logger.debug("HANDLE BY", transaction?.name.slice(0,4) ? '----')
         if !promise? or !promise.progressed?
           throw new Error("Cannot pass transaction: no promise; got #{promise}")
 

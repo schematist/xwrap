@@ -13,10 +13,11 @@ Test transactions
       beforeEach ->
         xtransaction = xwrap({adapter: 'stub'})
         {IMPLICIT, NEW, AUTO, adapter} = xtransaction
-        clients = adapter.pool.resources
+        clients = adapter.pool.resources.slice()
         spyClients(clients)
 
       afterEach ->
+
         xwrap.disconnect()
 
       it 'single query', ->
@@ -202,7 +203,40 @@ transactions, which will themselves be overleaved accross the two clients.
           commands.should.eql ['begin', 'X1', 'savepoint "sub"', 'Q1', 'rollback to "sub"', 'commit']        
 
       it.skip 'execute single autocommit', ->
+        xtransaction AUTO, ->
+          xtransaction.adapter.query('Q1')
+        .then ->
+          commands = querySeq(clients[1].query)
+          commands.should.eql ['Q1']
 
+Implicit transactions wait if any top-level are executing, in
+case they are wrapped. Here we insure that they restart if
+they aren't wrapped.
+
+      it 'delay implicit for open top-level', ->
+        resolver = null
+        p2 = p3 = null
+        p1 = xtransaction NEW, ->
+          xtransaction.adapter.query('Q1').delay(1).then ->
+            p2 = new Promise (res)->
+              resolver = res
+            p3 = xtransaction IMPLICIT, ->
+              xtransaction.adapter.query('Q2').then ->
+                return 'bar'
+
+            commands = querySeq(clients[1].query)
+            commands.should.eql ['begin', 'Q1']
+            setTimeout( ->
+              resolver('foo')
+              Promise.join(p1, p3).spread (r1, r3)->
+                r1.should.equal 'foo'
+                r3.should.equal 'bar'
+                commands = querySeq(clients[1].query)
+                commands.should.eql [
+                  'begin', 'Q1', 'commit', 'begin', 'Q2', 'commit']
+
+            , 10)
+            return p2
 
 Execute set of queries. 
 
