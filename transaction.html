@@ -182,7 +182,6 @@ promoted when all top-level transactions have finished processing.</p>
         Transaction.implicit.splice(
           Transaction.implicit.indexOf(self), <span class="hljs-number">1</span>)
       .<span class="hljs-keyword">then</span> (transaction)-&gt;
-        <span class="hljs-keyword">debugger</span>
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> self.state == <span class="hljs-string">'implicit'</span>
         <span class="hljs-keyword">return</span> self.merge(transaction) <span class="hljs-keyword">if</span> transaction?
         self.create()</pre></div></div>
@@ -384,9 +383,12 @@ fulfill directly.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">for</span> req <span class="hljs-keyword">in</span> Transaction.unanswered
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">for</span> req, i <span class="hljs-keyword">in</span> Transaction.unanswered
         <span class="hljs-keyword">if</span> req.implicit == implicit <span class="hljs-keyword">and</span> req.deferred?.promise.isPending()
           req.fulfill(<span class="hljs-literal">null</span>)
+          Transaction.unanswered.splice(i, <span class="hljs-number">1</span>)
+          <span class="hljs-keyword">break</span>
+
     <span class="hljs-keyword">else</span></pre></div></div>
             
         </li>
