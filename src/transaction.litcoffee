@@ -44,6 +44,16 @@ List of unanswered transaction requests waiting to see if enclosed.
 
       @unanswered = []
 
+Disposer-protocol for calling a callback in a transaction.
+
+      @create: (options)->
+        newTransaction = new Transaction(options)
+        type = options.type ? IMPLICIT
+        Promise.using(
+          newTransaction.start(type).disposer ->
+            Transaction.restartImplicit()
+        , (res)->res)
+
       constructor: ({@callback, @name, @adapter, @id})->
         @state = 'initial'
         @subtransactions = []
@@ -184,9 +194,17 @@ relation between implicit and anything outside.
         @state = 'completed'
         delete Transaction.processing[@name]
         @_client = null          
+
+        Transaction.restartImplicit()
+
+Check queue of implicit transactions and insure that none are blocked
+waiting for possibly wrapping. If there is one, start first in list.
+Otherwise, fulfill any waiting requests as there are no transactions
+waiting.
+
+      @restartImplicit: ->
         if _.size(Transaction.processing) > 0
           return
-
         implicit = Transaction.implicit.shift()
         if implicit?
           # in case not in "unanswered" -- answer
@@ -316,8 +334,12 @@ on setting, throws an error if a request has waited too long.
             processing = str(_.values(Transaction.processing))
             implicit = str(Transaction.implicit)
             requests = str(Transaction.unanswered)
-            Request.logger.info("Transactions: PRC: #{processing} " + 
-              "IMP: #{implicit} REQ: #{requests}")
+            nopen = _.size(Transaction.processing) +
+              Transaction.implicit.length +
+              Transaction.unanswered.length
+            if nopen > 0
+              Request.logger.info("Transactions: PRC: #{processing} " + 
+                "IMP: #{implicit} REQ: #{requests}")
             Transaction.unanswered.slice().map (r, i)->
               if !r.deferred?.promise.isPending()
                 Transaction.unanswered.splice(i, 1)

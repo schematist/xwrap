@@ -73,9 +73,8 @@ order of the callback.
         if !callback?
           new Error('callback must be specified')
 
-        newTransaction = new Transaction({callback, name, adapter, id})
-        type ?= IMPLICIT
-        return newTransaction.start(type)
+        Transaction.create({callback, name, adapter, id})
+
       adapter = resolveAdapter(adapterName, settings, id)
       adapter.id = id
       adapter.xtransaction = xtransaction
