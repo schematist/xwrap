@@ -51,6 +51,7 @@ Disposer-protocol for calling a callback in a transaction.
         type = options.type ? IMPLICIT
         Promise.using(
           newTransaction.start(type).disposer ->
+            Transaction.logger.trace("dispose: #{newTransaction.name}")
             Transaction.restartImplicit()
         , (res)->res)
 
@@ -59,6 +60,7 @@ Disposer-protocol for calling a callback in a transaction.
         @subtransactions = []
         @_client = null
         @isSubtransaction = false
+        @requestUp = null
 
 Start the transaction up -- depending on the type.
 
@@ -101,11 +103,9 @@ promoted when all top-level transactions have finished processing.
           @state = 'implicit'
           self = this
           Transaction.implicit.push self
-          return @promise = Request.ask(@id, self.name).finally ->
-            return unless self.state == 'implicit'
-            Transaction.implicit.splice(
-              Transaction.implicit.indexOf(self), 1)
-          .then (transaction)->
+          @requestUp = new Request(@id, @name)
+          @requestUp.getTransaction().then (transaction)->
+            self.requestUp = null
             return unless self.state == 'implicit'
             return self.merge(transaction) if transaction?
             self.create()
@@ -132,7 +132,12 @@ transaction before we complete.
         self = this
         Transaction.processing[self.name] = self
         return Promise.using @adapter.getRawClient(), (client)->
-            self.execute(client)
+          Transaction.logger.trace "started #{self.name}"
+          self.execute(client)
+        .finally ->
+          Transaction.logger.trace "finished #{self.name}"
+          Transaction.restartImplicit()
+
 
         ###
         return Promise.any([
@@ -195,8 +200,6 @@ relation between implicit and anything outside.
         delete Transaction.processing[@name]
         @_client = null          
 
-        Transaction.restartImplicit()
-
 Check queue of implicit transactions and insure that none are blocked
 waiting for possibly wrapping. If there is one, start first in list.
 Otherwise, fulfill any waiting requests as there are no transactions
@@ -206,18 +209,8 @@ waiting.
         if _.size(Transaction.processing) > 0
           return
         implicit = Transaction.implicit.shift()
-        if implicit?
-          # in case not in "unanswered" -- answer
-          Request.handle null, implicit.promise,
-            adapter: @adapter
-          # implicit might be in unanswered already -- if so,
-          # fulfill directly.
-          for req, i in Transaction.unanswered
-            if req.implicit == implicit and req.deferred?.promise.isPending()
-              req.fulfill(null)
-              Transaction.unanswered.splice(i, 1)
-              break
-
+        if implicit? and implicit.requestUp?
+          implicit.requestUp.fulfill(null)
         else
           # no transactions for these requests
           while Transaction.unanswered.length > 0

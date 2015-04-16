@@ -7,15 +7,17 @@ trigger an error if no wrapper exists), and `SUB` to force a sub-transaction
 transaction, which simply doesn't wrap client calls. `IMPLICIT` marks
 a transaction that could either be top-level or wrapped.
 
+    env = process.env
 
     module.exports = {
       NEW: 'new'
       SUB: 'sub'
       AUTO: 'auto'
       IMPLICIT: 'implicit'
-      GLOBAL_TIMEOUT: null #10000
-      MAX_REQUEST_IN_TRANSACTION: 1000 * 10
-      TICKER_REPEAT: 1000 * 5
+      LOGLEVEL: env.XW_LOGLEVEL ? 'info'
+      GLOBAL_TIMEOUT: env.XW_GLOBAL_TIMEOUT ? null #10000
+      MAX_REQUEST_IN_TRANSACTION: env.XW_MAX_REQUEST_IN_TRANSACTION ? 1000 * 10
+      TICKER_REPEAT: env.XW_TICKER_REPEAT ? 1000 * 5
 
     }
 

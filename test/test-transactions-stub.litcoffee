@@ -56,7 +56,9 @@ transactions serialized.
 
       it 'multiple transactions', ->
         Promise.map [1..5], (i)->
-          xtransaction NEW, ()->
+          if i == 2
+            debugger
+          xtransaction NEW, "X#{i}", ()->
             xtransaction.adapter.query("Q#{i}")
         .then ->
           commands0 = querySeq(clients[0].query)
@@ -88,7 +90,7 @@ heirarchy must be preserved in the executed queries.
 Note that the extra queries can come on either side of the savepoint groups.
 
       it 'nested subtransactions', ->
-        xtransaction NEW, ()->
+        xtransaction NEW, 'O', ()->
           Promise.join(
             doQueries('X'),
             doTransactions("XT", doTransactions))
@@ -180,9 +182,9 @@ transactions, which will themselves be overleaved accross the two clients.
           commands.should.eql ['begin', 'Q1', 'commit']
 
       it 'subtransaction with exception caught', ->
-        xtransaction NEW, null, 'X', ()->
+        xtransaction NEW, 'X', ()->
           xtransaction.adapter.query('X1').then ->
-            xtransaction IMPLICIT, null, 'sub', ()->
+            xtransaction IMPLICIT, 'sub', ()->
               xtransaction.adapter.query('Q1').then ->
                 err = new Error('fooInner')
                 err.signed = 'unsigned'
@@ -213,13 +215,15 @@ Implicit transactions wait if any top-level are executing, in
 case they are wrapped. Here we insure that they restart if
 they aren't wrapped.
 
-      it 'delay implicit for open top-level', ->
+      it 'delay implicit for open top-level', (done)->
         resolver = null
         p2 = p3 = null
         p1 = xtransaction NEW, ->
           xtransaction.adapter.query('Q1').delay(1).then ->
             p2 = new Promise (res)->
               resolver = res
+            # transaction not wrapped because promise p3 doesn't
+            # chain back to outer
             p3 = xtransaction IMPLICIT, ->
               xtransaction.adapter.query('Q2').then ->
                 return 'bar'
@@ -234,6 +238,7 @@ they aren't wrapped.
                 commands = querySeq(clients[1].query)
                 commands.should.eql [
                   'begin', 'Q1', 'commit', 'begin', 'Q2', 'commit']
+              .then (->done()), ((err)->done(err))
 
             , 10)
             return p2
@@ -249,7 +254,7 @@ Execute set of transactions.
       doTransactions = (prefix = 'T', callback = doQueries)->
         Promise.map [1..5], (i)->
           name = "#{prefix}#{i}"
-          xtransaction IMPLICIT, null, name, ()->callback(name)
+          xtransaction IMPLICIT, name, ()->callback(name)
 
 Spy on calls to client query.
 

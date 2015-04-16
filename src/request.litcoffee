@@ -24,7 +24,7 @@ if there are any outstanding transactions.
 
 Wrapper around `new Request`, then `getTransaction`
 
-      @ask: (id, name, implicit)->
+      @ask: (id, name)->
         (new Request id, name).getTransaction()
 
 Get a shared client in a transaction; returns `null` if no transaction.
@@ -39,7 +39,7 @@ Checkout client from transaction.
         return Request.ask(id, name.then) (transaction)->
           transaction?.takeClient() ? null
 
-      constructor: (@id, @name, @implicit)->
+      constructor: (@id, @name)->
         __requestNumber += 1
         @name = "?#{__requestNumber}" if !@name?
 
@@ -58,11 +58,11 @@ and still haven't got a transaction, we assume there is no wrapper.
         @deferred = d = Promise.defer()
         Request.logger.debug("ASK #{@name}")
         process.nextTick ->
-          Request.logger.debug("(ASK UP)")
+          Request.logger.debug("(ASK UP: #{self.name.slice(0, 4)})")
           d.progress self
           process.nextTick ->
-            Request.logger.debug("(ASK UNA)")
             if d.promise.isPending()
+              Request.logger.debug("(ASK UNA: #{self.name.slice(0, 4)})")
               Request.handleUnanswered(self)
 
         # create error so we can capture the "getTransaction"

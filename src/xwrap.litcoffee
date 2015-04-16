@@ -64,16 +64,16 @@ order of the callback.
       wrap ?= true
       xtransaction = ()->
         if typeof arguments[0] == 'object'
-          {type, callback, name, id} = type
+          {type, callback, name} = type
         for arg, i in arguments
           if typeof arg == 'function'
             callback = arg
-            [type, id, name] = Array::slice.call(arguments, 0, i)
+            [type, name] = Array::slice.call(arguments, 0, i)
             break
         if !callback?
           new Error('callback must be specified')
 
-        Transaction.create({callback, name, adapter, id})
+        Transaction.create({callback, type, name, adapter, id})
 
       adapter = resolveAdapter(adapterName, settings, id)
       adapter.id = id
