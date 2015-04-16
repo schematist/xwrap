@@ -56,7 +56,7 @@ __requestNumber = <span class="hljs-number">0</span>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@ask</span>: <span class="hljs-function"><span class="hljs-params">(id, name, implicit)</span>-&gt;</span>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@ask</span>: <span class="hljs-function"><span class="hljs-params">(id, name)</span>-&gt;</span>
     (<span class="hljs-keyword">new</span> Request id, name).getTransaction()</pre></div></div>
             
         </li>
@@ -93,7 +93,7 @@ __requestNumber = <span class="hljs-number">0</span>
     <span class="hljs-keyword">return</span> Request.ask(id, name.<span class="hljs-keyword">then</span>) (transaction)-&gt;
       transaction?.takeClient() ? <span class="hljs-literal">null</span>
 
-  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@id</span>, <span class="hljs-property">@name</span>, <span class="hljs-property">@implicit</span>)</span>-&gt;</span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@id</span>, <span class="hljs-property">@name</span>)</span>-&gt;</span>
     __requestNumber += <span class="hljs-number">1</span>
     <span class="hljs-property">@name</span> = <span class="hljs-string">"?<span class="hljs-subst">#{__requestNumber}</span>"</span> <span class="hljs-keyword">if</span> !<span class="hljs-property">@name</span>?</pre></div></div>
             
@@ -121,11 +121,11 @@ and still haven’t got a transaction, we assume there is no wrapper.</p>
     <span class="hljs-property">@deferred</span> = d = Promise.defer()
     Request.logger.debug(<span class="hljs-string">"ASK <span class="hljs-subst">#{<span class="hljs-property">@name</span>}</span>"</span>)
     process.nextTick -&gt;
-      Request.logger.debug(<span class="hljs-string">"(ASK UP)"</span>)
+      Request.logger.debug(<span class="hljs-string">"(ASK UP: <span class="hljs-subst">#{self.name.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>)}</span>)"</span>)
       d.progress self
       process.nextTick -&gt;
-        Request.logger.debug(<span class="hljs-string">"(ASK UNA)"</span>)
         <span class="hljs-keyword">if</span> d.promise.isPending()
+          Request.logger.debug(<span class="hljs-string">"(ASK UNA: <span class="hljs-subst">#{self.name.slice(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>)}</span>)"</span>)
           Request.handleUnanswered(self)</pre></div></div>
             
         </li>

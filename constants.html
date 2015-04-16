@@ -42,14 +42,17 @@ a transaction that could either be top-level or wrapped.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-built_in">module</span>.exports = {
+            <div class="content"><div class='highlight'><pre>env = process.env
+
+<span class="hljs-built_in">module</span>.exports = {
   <span class="hljs-attribute">NEW</span>: <span class="hljs-string">'new'</span>
   <span class="hljs-attribute">SUB</span>: <span class="hljs-string">'sub'</span>
   <span class="hljs-attribute">AUTO</span>: <span class="hljs-string">'auto'</span>
   <span class="hljs-attribute">IMPLICIT</span>: <span class="hljs-string">'implicit'</span>
-  <span class="hljs-attribute">GLOBAL_TIMEOUT</span>: <span class="hljs-literal">null</span> <span class="hljs-comment">#10000</span>
-  <span class="hljs-attribute">MAX_REQUEST_IN_TRANSACTION</span>: <span class="hljs-number">1000</span> * <span class="hljs-number">10</span>
-  <span class="hljs-attribute">TICKER_REPEAT</span>: <span class="hljs-number">1000</span> * <span class="hljs-number">5</span>
+  <span class="hljs-attribute">LOGLEVEL</span>: env.XW_LOGLEVEL ? <span class="hljs-string">'info'</span>
+  <span class="hljs-attribute">GLOBAL_TIMEOUT</span>: env.XW_GLOBAL_TIMEOUT ? <span class="hljs-literal">null</span> <span class="hljs-comment">#10000</span>
+  <span class="hljs-attribute">MAX_REQUEST_IN_TRANSACTION</span>: env.XW_MAX_REQUEST_IN_TRANSACTION ? <span class="hljs-number">1000</span> * <span class="hljs-number">10</span>
+  <span class="hljs-attribute">TICKER_REPEAT</span>: env.XW_TICKER_REPEAT ? <span class="hljs-number">1000</span> * <span class="hljs-number">5</span>
 
 }</pre></div></div>
             

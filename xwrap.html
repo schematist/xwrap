@@ -130,18 +130,17 @@ Specify for logging and debugging.</p>
   wrap ?= <span class="hljs-literal">true</span>
 <span class="hljs-function">  <span class="hljs-title">xtransaction</span> = <span class="hljs-params">()</span>-&gt;</span>
     <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> arguments[<span class="hljs-number">0</span>] == <span class="hljs-string">'object'</span>
-      {type, callback, name, id} = type
+      {type, callback, name} = type
     <span class="hljs-keyword">for</span> arg, i <span class="hljs-keyword">in</span> arguments
       <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> arg == <span class="hljs-string">'function'</span>
         callback = arg
-        [type, id, name] = <span class="hljs-attribute">Array</span>::slice.call(arguments, <span class="hljs-number">0</span>, i)
+        [type, name] = <span class="hljs-attribute">Array</span>::slice.call(arguments, <span class="hljs-number">0</span>, i)
         <span class="hljs-keyword">break</span>
     <span class="hljs-keyword">if</span> !callback?
       <span class="hljs-keyword">new</span> Error(<span class="hljs-string">'callback must be specified'</span>)
 
-    newTransaction = <span class="hljs-keyword">new</span> Transaction({callback, name, adapter, id})
-    type ?= IMPLICIT
-    <span class="hljs-keyword">return</span> newTransaction.start(type)
+    Transaction.create({callback, type, name, adapter, id})
+
   adapter = resolveAdapter(adapterName, settings, id)
   adapter.id = id
   adapter.xtransaction = xtransaction
