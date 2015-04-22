@@ -79,9 +79,9 @@ order of the callback.
       adapter.id = id
       adapter.xtransaction = xtransaction
       findAdapterFeatures(adapter)
-      if wrap? and adapter.features.xwrap.wrap
-        adapter.wrap (callerName)->
-          return Request.client(id, callerName)
+      # NEED TO FIX & TEST WRAPPING
+      #if wrap? and adapter.features.xwrap.wrap
+      #  adapter.wrap 
 
       # add a full xwrap interface to transaction, but specialized
       # to the id of the adapter.
