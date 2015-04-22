@@ -289,7 +289,7 @@ inside and hasn't got news yet.
 
       Request.handleUnanswered = (request)->
         if !request.deferred?.promise.isPending()
-          Request.logger.debug("unhandled, not pending:", request.name ? '????')
+          Request.logger.trace("unhandled, not pending:", request.name ? '????')
           return 
         if _.size(Transaction.processing) > 0 || Transaction.implicit.length > 0
           Transaction.unanswered.push request

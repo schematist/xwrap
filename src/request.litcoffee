@@ -67,11 +67,8 @@ and still haven't got a transaction, we assume there is no wrapper.
 
         # create error so we can capture the "getTransaction"
         # stack trace in case handler causes us to reject.
-        err = new Error("cancelled")
-        return d.promise.catch (cerr)->
-          Request.logger.error(cerr.stack ? cerr)
-          err.cancel = cerr
-          throw err
+        @callerStack = new Error().stack
+        return d.promise
 
 Called by the transaction progress handler to pass back
 the transaction.
@@ -106,7 +103,7 @@ will be used to match requests.
         if !promise? or !promise.progressed?
           throw new Error("Cannot pass transaction: no promise; got #{promise}")
 
-        return promise.progressed (request)->
+        return promise.progressed (request, stack)->
           # unwrap -- annoying oddity
           while request.value?
             request = request.value
