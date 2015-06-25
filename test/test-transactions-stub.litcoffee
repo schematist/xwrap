@@ -49,6 +49,21 @@ Test transactions
           commands = checkSavepoint(commands, name)
           commands.should.eql ['Q1']
 
+      it 'explicit rollback', ->
+        xtransaction NEW, (transaction)->
+          xtransaction.adapter.query('Q1')
+          .then ->
+            transaction.rollback()
+          .then ->
+            xtransaction.adapter.query('Q2')
+        .then ->
+          commands = querySeq(clients[1].query)
+          commands = checkCommit(commands, 'rollback')
+          commands.should.eql ['Q1']
+          other = querySeq(clients[0].query)
+          other.should.eql ['Q2']
+
+
 Transactions in any order, will execute, interleaved, on both adapter clients.
 However, the streams in the clients will have the transactions using that client
 serialized, so that when we put the command streams together we have all the

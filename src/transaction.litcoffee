@@ -238,6 +238,8 @@ If this is a subtransaction and the adapter does not support subtransactions,
 this is a noop.
 
       commit: ()->
+        if @state == 'completed'
+          return Promise.resolve(this)
         Promise.using( @takeClient(@name), (client)=>
           if @isSubtransaction
             if @adapter.features.xwrap.subtransactions
@@ -253,6 +255,8 @@ If this is a subtransaction and the adapter does not support subtransactions,
 this is a noop.
 
       rollback: ()->
+        if @state == 'completed'
+          return Promise.resolve(this)
         Promise.using( @takeClient(@name), (client)=>
           if @isSubtransaction
             if @adapter.features.xwrap.subtransactions

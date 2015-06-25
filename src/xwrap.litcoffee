@@ -78,6 +78,7 @@ order of the callback.
       adapter = resolveAdapter(adapterName, settings, id)
       adapter.id = id
       adapter.xtransaction = xtransaction
+      adapters[id] = adapter
       findAdapterFeatures(adapter)
       # NEED TO FIX & TEST WRAPPING
       #if wrap? and adapter.features.xwrap.wrap
@@ -86,17 +87,16 @@ order of the callback.
       # add a full xwrap interface to transaction, but specialized
       # to the id of the adapter.
       xtransaction.client = (callerName)->
-        return Request.client(id, callerName)
+        return initializer.client(id, callerName)
 
       xtransaction.takeClient = (callerName)->
-        return Request.takeClient(id, callerName)
+        return initializer.takeClient(id, callerName)
 
       xtransaction.getTransaction = (callerName)->
-        return Request.ask(id, callerName)
+        return initializer.getTransaction(id, callerName)
 
       xtransaction.disconnect = ()->
-        adapter.disconnect()
-        delete adapters[adapter.id]
+        return initializer.disconnect(id)
 
       xtransaction.NEW = NEW
       xtransaction.SUB = SUB
@@ -161,7 +161,7 @@ Check adapter for interfaces, and set features if not set.
 
 Return adapter for id, or "the" adapter if there is only one
 
-    getAdapter = (id)->
+    initializer.getAdapter = getAdapter = (id)->
       return adapters[id] if id?
       switch _.size(adapters)
         when 1 then return _.values(adapters)[0]
@@ -171,11 +171,20 @@ Return adapter for id, or "the" adapter if there is only one
 
 Add xwrap interface to initializer function.
 
+Get a client -- either a client in a transaction or any client
+if no active transaction.
+
     initializer.client = (id, callerName)->
-      return new Request.client(id, callerName)
+      return Request.client(id, callerName).then (client)->
+        return client ? getAdapter(id).getRawClient()
+
+Take client from transaction -- other users of transaction will wait.
+Wrap in "Promise.using" to insure client is returned.
+
+Returns null if no active transaction.
 
     initializer.takeClient = (id, callerName)->
-      return new Request.takeClient(id, callerName)
+      return Request.takeClient(id, callerName)
 
     initializer.xtransaction = (id, callerName)->
       adapter = getAdapter(id)
@@ -184,7 +193,7 @@ Add xwrap interface to initializer function.
     initializer.disconnect = (id)->
       adapter = getAdapter(id)
       return if !adapter?
-      adapter?.disconnect()
+      adapter?.disconnect?()
       if id?
         delete adapters[id]
       else
