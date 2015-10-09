@@ -190,15 +190,18 @@ Returns null if no active transaction.
       adapter = getAdapter(id)
       adapter.xtransaction
 
+Disconnect from data source; return promise fulfilled when 
+disconnection complete.
+
     initializer.disconnect = (id)->
       adapter = getAdapter(id)
-      return if !adapter?
-      adapter?.disconnect?()
+      return Promise.resolve() if !adapter?
       if id?
         delete adapters[id]
       else
         # must be only one or "getAdapter" will raise an error
         delete adapters[Object.keys(adapters)[0]]
+      adapter?.disconnect?()
 
     initializer.NEW = NEW
     initializer.SUB = SUB

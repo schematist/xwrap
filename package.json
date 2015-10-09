@@ -27,6 +27,7 @@
     "async-pool": "^0.2.3",
     "async-proxy-pool": "^0.1.2",
     "bluebird": "^2.9.15",
+    "coffee-script": "^1.10.0",
     "lodash": "^3.6.0",
     "logger-facade-nodejs": "0.0.3"
   },
