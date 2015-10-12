@@ -144,10 +144,8 @@ Specify for logging and debugging.</p>
   adapter = resolveAdapter(adapterName, settings, id)
   adapter.id = id
   adapter.xtransaction = xtransaction
-  findAdapterFeatures(adapter)
-  <span class="hljs-keyword">if</span> wrap? <span class="hljs-keyword">and</span> adapter.features.xwrap.wrap
-    adapter.wrap (callerName)-&gt;
-      <span class="hljs-keyword">return</span> Request.client(id, callerName)</pre></div></div>
+  adapters[id] = adapter
+  findAdapterFeatures(adapter)</pre></div></div>
             
         </li>
         
@@ -158,23 +156,37 @@ Specify for logging and debugging.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
+              <p>NEED TO FIX &amp; TEST WRAPPING
+if wrap? and adapter.features.xwrap.wrap
+ adapter.wrap </p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
               <p>add a full xwrap interface to transaction, but specialized
 to the id of the adapter.</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>  xtransaction.client = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
-    <span class="hljs-keyword">return</span> Request.client(id, callerName)
+    <span class="hljs-keyword">return</span> initializer.client(id, callerName)
 
   xtransaction.takeClient = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
-    <span class="hljs-keyword">return</span> Request.takeClient(id, callerName)
+    <span class="hljs-keyword">return</span> initializer.takeClient(id, callerName)
 
   xtransaction.getTransaction = <span class="hljs-function"><span class="hljs-params">(callerName)</span>-&gt;</span>
-    <span class="hljs-keyword">return</span> Request.ask(id, callerName)
+    <span class="hljs-keyword">return</span> initializer.getTransaction(id, callerName)
 
   xtransaction.disconnect = <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
-    adapter.disconnect()
-    <span class="hljs-keyword">delete</span> adapters[adapter.id]
+    <span class="hljs-keyword">return</span> initializer.disconnect(id)
 
   xtransaction.NEW = NEW
   xtransaction.SUB = SUB
@@ -188,11 +200,11 @@ to the id of the adapter.</p>
         </li>
         
         
-        <li id="section-7">
+        <li id="section-8">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <p>Load and initialize an adapter, given name, settings and ID.</p>
 
@@ -224,11 +236,11 @@ to the id of the adapter.</p>
         </li>
         
         
-        <li id="section-8">
+        <li id="section-9">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
               <p>Check adapter for interfaces, and set features if not set.</p>
 
@@ -262,17 +274,17 @@ WRAP_INTERACE = [<span class="hljs-string">'wrap'</span>]
         </li>
         
         
-        <li id="section-9">
+        <li id="section-10">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <p>Return adapter for id, or “the” adapter if there is only one</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">getAdapter</span> = <span class="hljs-params">(id)</span>-&gt;</span>
+            <div class="content"><div class='highlight'><pre>initializer.getAdapter = getAdapter = <span class="hljs-function"><span class="hljs-params">(id)</span>-&gt;</span>
   <span class="hljs-keyword">return</span> adapters[id] <span class="hljs-keyword">if</span> id?
   <span class="hljs-keyword">switch</span> _.size(adapters)
     <span class="hljs-keyword">when</span> <span class="hljs-number">1</span> <span class="hljs-keyword">then</span> <span class="hljs-keyword">return</span> _.values(adapters)[<span class="hljs-number">0</span>]
@@ -283,30 +295,61 @@ WRAP_INTERACE = [<span class="hljs-string">'wrap'</span>]
         </li>
         
         
-        <li id="section-10">
+        <li id="section-11">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-10">&#182;</a>
+                <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
               <p>Add xwrap interface to initializer function.</p>
+<p>Get a client — either a client in a transaction or any client
+if no active transaction.</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>initializer.client = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Request.client(id, callerName)
+  <span class="hljs-keyword">return</span> Request.client(id, callerName).<span class="hljs-keyword">then</span> (client)-&gt;
+    <span class="hljs-keyword">return</span> client ? getAdapter(id).getRawClient()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Take client from transaction — other users of transaction will wait.
+Wrap in “Promise.using” to insure client is returned.</p>
+<p>Returns null if no active transaction.</p>
 
-initializer.takeClient = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Request.takeClient(id, callerName)
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>initializer.takeClient = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
+  <span class="hljs-keyword">return</span> Request.takeClient(id, callerName)
 
 initializer.xtransaction = <span class="hljs-function"><span class="hljs-params">(id, callerName)</span>-&gt;</span>
   adapter = getAdapter(id)
-  adapter.xtransaction
+  adapter.xtransaction</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Disconnect from data source; return promise fulfilled when 
+disconnection complete.</p>
 
-initializer.disconnect = <span class="hljs-function"><span class="hljs-params">(id)</span>-&gt;</span>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>initializer.disconnect = <span class="hljs-function"><span class="hljs-params">(id)</span>-&gt;</span>
   adapter = getAdapter(id)
-  <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> !adapter?
-  adapter?.disconnect()
+  <span class="hljs-keyword">return</span> Promise.resolve() <span class="hljs-keyword">if</span> !adapter?
   <span class="hljs-keyword">if</span> id?
     <span class="hljs-keyword">delete</span> adapters[id]
   <span class="hljs-keyword">else</span></pre></div></div>
@@ -314,17 +357,18 @@ initializer.disconnect = <span class="hljs-function"><span class="hljs-params">(
         </li>
         
         
-        <li id="section-11">
+        <li id="section-14">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-11">&#182;</a>
+                <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
               <p>must be only one or “getAdapter” will raise an error</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">delete</span> adapters[Object.keys(adapters)[<span class="hljs-number">0</span>]]
+  adapter?.disconnect?()
 
 initializer.NEW = NEW
 initializer.SUB = SUB
@@ -341,11 +385,11 @@ initializer.useLogger = <span class="hljs-function"><span class="hljs-params">(l
         </li>
         
         
-        <li id="section-12">
+        <li id="section-15">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
+                <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
               <p><a href="./index.html"><strong>Home</strong></a></p>
 

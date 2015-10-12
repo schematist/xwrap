@@ -455,6 +455,8 @@ this is a noop.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">commit</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@state</span> == <span class="hljs-string">'completed'</span>
+      <span class="hljs-keyword">return</span> Promise.resolve(<span class="hljs-keyword">this</span>)
     Promise.using( <span class="hljs-property">@takeClient</span>(<span class="hljs-property">@name</span>), <span class="hljs-function"><span class="hljs-params">(client)</span>=&gt;</span>
       <span class="hljs-keyword">if</span> <span class="hljs-property">@isSubtransaction</span>
         <span class="hljs-keyword">if</span> <span class="hljs-property">@adapter</span>.features.xwrap.subtransactions
@@ -480,6 +482,8 @@ this is a noop.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">rollback</span>: <span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@state</span> == <span class="hljs-string">'completed'</span>
+      <span class="hljs-keyword">return</span> Promise.resolve(<span class="hljs-keyword">this</span>)
     Promise.using( <span class="hljs-property">@takeClient</span>(<span class="hljs-property">@name</span>), <span class="hljs-function"><span class="hljs-params">(client)</span>=&gt;</span>
       <span class="hljs-keyword">if</span> <span class="hljs-property">@isSubtransaction</span>
         <span class="hljs-keyword">if</span> <span class="hljs-property">@adapter</span>.features.xwrap.subtransactions
@@ -560,7 +564,7 @@ inside and hasn’t got news yet.</p>
             
             <div class="content"><div class='highlight'><pre>  Request.handleUnanswered = <span class="hljs-function"><span class="hljs-params">(request)</span>-&gt;</span>
     <span class="hljs-keyword">if</span> !request.deferred?.promise.isPending()
-      Request.logger.debug(<span class="hljs-string">"unhandled, not pending:"</span>, request.name ? <span class="hljs-string">'????'</span>)
+      Request.logger.trace(<span class="hljs-string">"unhandled, not pending:"</span>, request.name ? <span class="hljs-string">'????'</span>)
       <span class="hljs-keyword">return</span> 
     <span class="hljs-keyword">if</span> _.size(Transaction.processing) &gt; <span class="hljs-number">0</span> || Transaction.implicit.length &gt; <span class="hljs-number">0</span>
       Transaction.unanswered.push request

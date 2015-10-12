@@ -142,11 +142,8 @@ stack trace in case handler causes us to reject.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    err = <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"cancelled"</span>)
-    <span class="hljs-keyword">return</span> d.promise.<span class="hljs-keyword">catch</span> (cerr)-&gt;
-      Request.logger.error(cerr.stack ? cerr)
-      err.cancel = cerr
-      <span class="hljs-keyword">throw</span> err</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@callerStack</span> = <span class="hljs-keyword">new</span> Error().stack
+    <span class="hljs-keyword">return</span> d.promise</pre></div></div>
             
         </li>
         
@@ -213,7 +210,7 @@ will be used to match requests. </p>
     <span class="hljs-keyword">if</span> !promise? <span class="hljs-keyword">or</span> !promise.progressed?
       <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"Cannot pass transaction: no promise; got <span class="hljs-subst">#{promise}</span>"</span>)
 
-    <span class="hljs-keyword">return</span> promise.progressed (request)-&gt;</pre></div></div>
+    <span class="hljs-keyword">return</span> promise.progressed (request, stack)-&gt;</pre></div></div>
             
         </li>
         
