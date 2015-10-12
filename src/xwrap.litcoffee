@@ -76,7 +76,6 @@ order of the callback.
         Transaction.create({callback, type, name, adapter, id})
 
       adapter = resolveAdapter(adapterName, settings, id)
-      adapter.id = id
       adapter.xtransaction = xtransaction
       adapters[id] = adapter
       findAdapterFeatures(adapter)
@@ -104,11 +103,13 @@ order of the callback.
       xtransaction.Transaction = Transaction
       xtransaction.Request = Request
       xtransaction.adapter = adapter
-      xtransaction.id = id
+      xtransaction.id = adapter.id
       return xtransaction
 
 Load and initialize an adapter, given name, settings and ID.
 
+    __adapterID = 0;
+  
     resolveAdapter = (name, settings, id)->
       adapter = adapters[id]
       return adapter if adapter?
@@ -125,7 +126,11 @@ Load and initialize an adapter, given name, settings and ID.
             adapterMod = require './adapters/' + name
           else
             adapterMod = require "xwrap-#{name}"
-        return adapterMod.initialize(settings)
+        adapter = adapterMod.initialize(settings)
+        if !adapter.id?
+          adapter.id = id ? name + (++__adapterID);
+        return adapter
+
       catch e
         if e.message.indexOf('Cannot find module') != -1
           throw new Error("XWrap adapter '#{name}' not found.")
