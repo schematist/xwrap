@@ -16,8 +16,8 @@ a transaction that could either be top-level or wrapped.
       IMPLICIT: 'implicit'
       LOGLEVEL: env.XW_LOGLEVEL ? 'info'
       GLOBAL_TIMEOUT: env.XW_GLOBAL_TIMEOUT ? null #10000
-      MAX_REQUEST_IN_TRANSACTION: env.XW_MAX_REQUEST_IN_TRANSACTION ? 1000 * 10
-      TICKER_REPEAT: env.XW_TICKER_REPEAT ? 1000 * 5
+      MAX_REQUEST_IN_TRANSACTION: env.XW_MAX_REQUEST_IN_TRANSACTION ? 2000 * 60
+      TICKER_REPEAT: env.XW_TICKER_REPEAT ? 1000 * 30
 
     }
 
