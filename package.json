@@ -1,6 +1,6 @@
 {
   "name": "xwrap",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Wrap promise-based asynchronous call trees in transactions.",
   "main": "index.js",
   "scripts": {
