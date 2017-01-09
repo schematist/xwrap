@@ -181,7 +181,7 @@ if no active transaction.
 
     initializer.client = (id, callerName)->
       return Request.client(id, callerName).then (client)->
-        return client ? getAdapter(id).getRawClient()
+        return client ? getAdapter(id)?.getRawClient()
 
 Take client from transaction -- other users of transaction will wait.
 Wrap in "Promise.using" to insure client is returned.
