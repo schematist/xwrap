@@ -230,7 +230,7 @@ Implicit transactions wait if any top-level are executing, in
 case they are wrapped. Here we insure that they restart if
 they aren't wrapped.
 
-      it 'delay implicit for open top-level', (done)->
+      it 'delay implicit for open top-level', ()->
         resolver = null
         p2 = p3 = null
         p1 = xtransaction NEW, ->
@@ -253,7 +253,6 @@ they aren't wrapped.
                 commands = querySeq(clients[1].query)
                 commands.should.eql [
                   'begin', 'Q1', 'commit', 'begin', 'Q2', 'commit']
-              .then (->done()), ((err)->done(err))
 
             , 10)
             return p2
