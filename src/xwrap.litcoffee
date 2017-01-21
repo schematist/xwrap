@@ -76,6 +76,7 @@ order of the callback.
         Transaction.create({callback, type, name, adapter, id})
 
       adapter = resolveAdapter(adapterName, settings, id)
+      adapter.id = id
       adapter.xtransaction = xtransaction
       adapters[id] = adapter
       findAdapterFeatures(adapter)
