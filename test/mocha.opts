@@ -1,2 +1,2 @@
 -t 10000
---compilers coffee:coffeescript,litcoffee:coffeescript/register
+--register coffee:coffeescript,litcoffee:coffeescript/register
