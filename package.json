@@ -30,6 +30,9 @@
     "lodash": "^4.17.10",
     "logger-facade-nodejs": "2.0.0"
   },
+  "peerDependencies": {
+    "bluebird": "^2.x"
+  },
   "devDependencies": {
     "chai": "^4.1.2",
     "chai-string": "^1.1.1",
