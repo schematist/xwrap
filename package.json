@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "prepublish": "make doc lib",
-    "test": "mocha --recursive -u bdd --compilers coffee:coffee-script,litcoffee:coffee-script/register"
+    "test": "mocha --recursive -u bdd --compilers coffee:coffeescript,litcoffee:coffeescript/register"
   },
   "repository": {
     "type": "git",
@@ -36,7 +36,7 @@
   "devDependencies": {
     "chai": "^4.1.2",
     "chai-string": "^1.1.1",
-    "coffeescript": "^2.3.1",
+    "coffeescript": "^1.x",
     "docco": "^0.8.0",
     "logger-facade-console-plugin-nodejs": "2.0.0",
     "mocha": "^5.2.0",
