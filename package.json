@@ -27,14 +27,13 @@
     "async-pool": "^0.2.3",
     "async-proxy-pool": "^0.1.2",
     "bluebird": "^2.x",
-    "coffeescript": "^2.3.1",
     "lodash": "^4.17.10",
     "logger-facade-nodejs": "2.0.0"
   },
   "devDependencies": {
     "chai": "^4.1.2",
     "chai-string": "^1.1.1",
-    "coffee-script": "^1.9.1",
+    "coffeescript": "^2.3.1",
     "docco": "^0.8.0",
     "logger-facade-console-plugin-nodejs": "2.0.0",
     "mocha": "^5.2.0",
