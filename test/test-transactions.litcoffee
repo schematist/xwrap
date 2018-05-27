@@ -1,7 +1,7 @@
 Test transactions
 =================
 
-These tests are indended to test an adapter, passing if the wrapped 
+These tests are indended to test an adapter, passing if the wrapped
 transactions are ACID. It needs much work.
 
     Promise = require 'bluebird'
@@ -41,8 +41,8 @@ Remove spies from adapter after all tests complete.
 
         it 'wraps database use in transaction open/close', ->
           getSpyTransaction xtransaction, (client)->
-            logger.trace('create')
-            query(client, 'create')
+            logger.trace('select 1')
+            query(client, 'select 1')
           .then (client)->
             checkTransactionWrapped(client)
 
@@ -76,7 +76,7 @@ Remove spies from adapter after all tests complete.
         .then ->
           callback(client)
         .then ->
-          return client 
+          return client
 
     instrumentAdapter = (adapter)->
       _.flatten([BASIC_INTERFACE, SUBTRANSACTIONS_INTERFACE]).map (method)->
@@ -88,12 +88,12 @@ Remove spies from adapter after all tests complete.
         spies.trClient.restore()
         delete spies.trClient
       _.mapValues spies, (spy)->
-        spy.reset()
+        spy.resetHistory()
 
 Check that client calls are wrapped by open/close transaction.
 
 We check that the adapter has only been asked once for a cilent, that
-this was the same client that the transaction has, that that open and 
+this was the same client that the transaction has, that that open and
 close have been called, and that the transaction itself has only
 been asked for a client between open and close of transaction.
 
