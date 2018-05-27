@@ -28,9 +28,13 @@ the adapter. Otherwise instrument adapter transaction interface.
 
 Remove spies from adapter after all tests complete.
 
-      after: ()->
+      after ()->
         _.mapValues spies, (spy)->
-          spy.restore()
+          spy.trClient?.restore()
+        setTimeout(
+          () => process.exit(1),
+          1000)
+        xwrap.disconnect()
 
       describe 'basic', ->
         beforeEach ->

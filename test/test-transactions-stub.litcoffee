@@ -17,7 +17,6 @@ Test transactions
         spyClients(clients)
 
       afterEach ->
-
         xwrap.disconnect()
 
       it 'single query', ->
@@ -175,7 +174,7 @@ transactions, which will themselves be overleaved accross the two clients.
       it 'single query with exception on begin', ->
         clients[1].query.restore()
         stub = sinon.stub(clients[1], 'query')
-        stub.onCall(0).throws(new Error('foo')) 
+        stub.onCall(0).throws(new Error('foo'))
         xtransaction NEW, ()->
           xtransaction.adapter.query('Q1')
         .catch (foo)->
@@ -187,7 +186,7 @@ transactions, which will themselves be overleaved accross the two clients.
       it 'single query with exception on commit', ->
         clients[1].query.restore()
         stub = sinon.stub(clients[1], 'query')
-        stub.onCall(2).throws(new Error('foo')) 
+        stub.onCall(2).throws(new Error('foo'))
         xtransaction NEW, ()->
           xtransaction.adapter.query('Q1')
         .catch (foo)->
@@ -217,7 +216,7 @@ transactions, which will themselves be overleaved accross the two clients.
         .then (res)->
           res.should.equal 'OK'
           commands = querySeq(clients[1].query)
-          commands.should.eql ['begin', 'X1', 'savepoint "sub"', 'Q1', 'rollback to "sub"', 'commit']        
+          commands.should.eql ['begin', 'X1', 'savepoint "sub"', 'Q1', 'rollback to "sub"', 'commit']
 
       it.skip 'execute single autocommit', ->
         xtransaction AUTO, ->
@@ -257,7 +256,7 @@ they aren't wrapped.
             , 10)
             return p2
 
-Execute set of queries. 
+Execute set of queries.
 
       doQueries = (prefix = 'Q')->
         Promise.map ("#{prefix}#{i}" for i in [1..5]), (q)->
@@ -317,4 +316,3 @@ Splits an array on a given fragment of a string (e.g. "commit").
       return res
 
 [**Home**](./index.html)
-
