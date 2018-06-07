@@ -25,8 +25,8 @@
   },
   "homepage": "https://github.com/schematist/xwrap",
   "dependencies": {
-    "async-pool": "^0.2.3",
-    "async-proxy-pool": "^0.1.2",
+    "async-pool": "^0.2.6",
+    "async-proxy-pool": "^0.1.4",
     "bluebird": "^2.x",
     "lodash": "^4.17.10",
     "logger-facade-nodejs": "2.0.0"
