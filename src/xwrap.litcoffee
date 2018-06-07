@@ -39,10 +39,10 @@ function.
 All aruments can be passed in a hash. If the first argument is not a hash,
 then, arguments are interpreted based on which argument is callable: the
 first callable argument is taken to be the callback, and some or
-all of `type`, `id` and `name` may be undefined depending on the 
+all of `type`, `id` and `name` may be undefined depending on the
 order of the callback.
 
-* `type`: Type of transaction requested: 
+* `type`: Type of transaction requested:
 
   * `NEW` a new top-level transaction
   * `SUB` a sub-transaction
@@ -82,7 +82,7 @@ order of the callback.
       findAdapterFeatures(adapter)
       # NEED TO FIX & TEST WRAPPING
       #if wrap? and adapter.features.xwrap.wrap
-      #  adapter.wrap 
+      #  adapter.wrap
 
       # add a full xwrap interface to transaction, but specialized
       # to the id of the adapter.
@@ -110,7 +110,7 @@ order of the callback.
 Load and initialize an adapter, given name, settings and ID.
 
     __adapterID = 0;
-  
+
     resolveAdapter = (name, settings, id)->
       adapter = adapters[id]
       return adapter if adapter?
@@ -120,7 +120,7 @@ Load and initialize an adapter, given name, settings and ID.
             @name = name.name
             return name
           when name.match(/^\//)
-            adapterClass = require(name)
+            adapterMod = require(name)
           when fs.existsSync(__dirname + '/adapters/' + name + '.js') ||
               fs.existsSync(__dirname + '/adapters/' + name + '.coffee') ||
               fs.existsSync(__dirname + '/adapters/' + name + '.litcoffee')
@@ -142,9 +142,9 @@ Check adapter for interfaces, and set features if not set.
 
     BASIC_INTERFACE = [
       'getRawClient', 'openTransaction', 'commitTransaction', 'rollbackTransaction' ]
-    SUBTRANSACTIONS_INTERFACE = [ 
+    SUBTRANSACTIONS_INTERFACE = [
       'openSubTransaction', 'commitSubTransaction', 'rollbackSubTransaction' ]
-    WRAP_INTERACE = ['wrap']      
+    WRAP_INTERACE = ['wrap']
 
     findAdapterFeatures = (adapter)->
       features = (adapter.features ?= {})
@@ -196,7 +196,7 @@ Returns null if no active transaction.
       adapter = getAdapter(id)
       adapter.xtransaction
 
-Disconnect from data source; return promise fulfilled when 
+Disconnect from data source; return promise fulfilled when
 disconnection complete.
 
     initializer.disconnect = (id)->
@@ -222,4 +222,3 @@ disconnection complete.
       Request.logger = Transaction.logger = logger = logger_
 
 [**Home**](./index.html)
-

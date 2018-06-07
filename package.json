@@ -4,6 +4,7 @@
   "description": "Wrap promise-based asynchronous call trees in transactions.",
   "main": "index.js",
   "scripts": {
+    "build": "make doc lib",
     "prepublish": "make doc lib",
     "test": "mocha --recursive -u bdd --require coffeescript --require coffeescript/register test/**/*.litcoffee"
   },
